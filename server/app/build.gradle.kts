@@ -111,6 +111,20 @@ tasks.register<JavaExec>("onboardProbeKentuckyRefreshScope") {
   outputs.upToDateWhen { false }
 }
 
+// Operator diagnostic: does Burlington/London accept an EXPLICIT granted scope on refresh, or only a
+// scopeless refresh? Settles the refreshScope default (Granted vs Omit). See
+// ProbeBurlingtonRefreshScope.kt.
+//   ./gradlew :app:onboardProbeBurlingtonRefreshScope --args="<encryptedRefreshBlob>"
+tasks.register<JavaExec>("onboardProbeBurlingtonRefreshScope") {
+  group = "onboarding"
+  description = "Probe whether Burlington accepts an explicit scope on refresh (args: <encryptedRefreshBlob>)."
+  classpath = sourceSets["main"].runtimeClasspath
+  mainClass.set("org.opengb.onboarding.ProbeBurlingtonRefreshScopeKt")
+  workingDir = rootProject.projectDir.parentFile
+  // See onboardFetchAppInfo above: a live-network diagnostic must never be treated as cacheable.
+  outputs.upToDateWhen { false }
+}
+
 // GraalVM native image — produces a self-contained binary for the scale-to-zero Fly.io
 // deployment (see ../../Dockerfile and docs/deployment.md). CIO is the only Ktor engine that
 // works under native-image; see bootable/CioKtorService.kt for why we committed to it. The

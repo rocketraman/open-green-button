@@ -24,6 +24,7 @@ import org.opengb.proxy.BlobDecryptionException
 import org.opengb.proxy.RefreshBlob
 import org.opengb.proxy.TokenCrypto
 import org.opengb.proxy.UsageClient
+import org.opengb.utility.RefreshScope
 import org.opengb.utility.UnknownUtilityException
 import org.opengb.utility.UtilityProfile
 import org.opengb.utility.UtilityRegistry
@@ -118,9 +119,15 @@ private suspend fun RoutingContext.prepareFetch(
     return null
   }
 
-  // Refresh scope is decoupled from the authorize scope: a per-utility override wins, else replay
-  // whatever the utility granted at exchange (blob.scope). See UtilityProfile.refreshScope.
-  val refreshScope = utility.refreshScope ?: blob.scope
+  // Resolve the refresh-grant scope from the per-utility mode (see UtilityProfile.refreshScope /
+  // RefreshScope). Granted replays what the utility gave us at exchange (blob.scope); a null there
+  // ⇒ omit, per RFC 6749 §6. OAuthClient.refresh omits the param when this is null.
+  val refreshScope =
+    when (val mode = utility.refreshScope) {
+      RefreshScope.Omit -> null
+      RefreshScope.Granted -> blob.scope
+      is RefreshScope.Explicit -> mode.scope
+    }
   val refreshed = call.refreshAccessToken(deps, utility, blob.refreshToken, refreshScope) ?: return null
 
   // The refresh may have redeemed a ONE-TIME refresh token (savagedata/OpenIddict), invalidating the

@@ -73,9 +73,10 @@ class OAuthClient(private val clients: UtilityHttpClients, private val json: Jso
     post(utility) {
       append("grant_type", "refresh_token")
       append("refresh_token", refreshToken)
-      // RFC 6749 §6 says an omitted `scope` here means "same as originally granted"
-      // some utilities seem to reject an explicit scope here, even if it the same as requested
-      if (!scope.isNullOrBlank()) append("scope", scope)
+      // RFC 6749 §6: an omitted `scope` means "same as originally granted". `null` omits it; any
+      // non-null value is sent verbatim (some utilities reject an explicit scope even when it equals
+      // what was granted, so callers default to null).
+      if (scope != null) append("scope", scope)
     }
 
   /**

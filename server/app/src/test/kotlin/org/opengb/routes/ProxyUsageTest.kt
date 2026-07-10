@@ -33,6 +33,7 @@ import org.opengb.config.ServerConfig
 import org.opengb.config.StateConfig
 import org.opengb.proxy.RefreshBlob
 import org.opengb.proxy.TokenCrypto
+import org.opengb.utility.RefreshScope
 import org.opengb.utility.TokenAuthStyle
 import org.opengb.utility.UtilityProfile
 import org.opengb.utility.UtilityQuirks
@@ -129,39 +130,48 @@ val ProxyUsageTest by testSuite {
     }
   }
 
-  // Refresh scope is decoupled from the authorize scope (UtilityProfile.refreshScope).
-  test("refresh replays the granted blob scope when no refreshScope override is set") {
+  // RefreshScope modes (UtilityProfile.refreshScope), decoupled from the authorize scope.
+  test("RefreshScope.Granted (default) replays the scope the utility granted at exchange") {
     var sent: String? = "UNSET"
+    // Harness seeds blob.scope = "FB=1;IntervalDuration=900".
     runProxyUsage(captureTokenRequest = { sent = scopeSentOnRefresh(it) }) { client, ctx ->
       val resp = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob)
       assert(resp.status == HttpStatusCode.OK) { resp.bodyAsText() }
     }
-    // The harness seeds blob.scope = utility.defaultScope.
-    assert(sent == "FB=1;IntervalDuration=900") { "expected granted blob scope on refresh; got $sent" }
+    assert(sent == "FB=1;IntervalDuration=900") { "expected Granted to replay blob.scope; got $sent" }
   }
 
-  test("refreshScope overrides the scope sent on the refresh grant") {
+  test("RefreshScope.Granted omits scope when the utility granted none (null blob.scope)") {
+    var sent: String? = "UNSET"
+    runProxyUsage(blobScope = null, captureTokenRequest = { sent = scopeSentOnRefresh(it) }) { client, ctx ->
+      val resp = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob)
+      assert(resp.status == HttpStatusCode.OK) { resp.bodyAsText() }
+    }
+    assert(sent == null) { "expected Granted with no grant to omit scope; got $sent" }
+  }
+
+  test("RefreshScope.Omit sends no scope even when a grant is available") {
     var sent: String? = "UNSET"
     runProxyUsage(
-      refreshScope = "FB=1",
+      refreshScope = RefreshScope.Omit,
       captureTokenRequest = { sent = scopeSentOnRefresh(it) },
     ) { client, ctx ->
       val resp = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob)
       assert(resp.status == HttpStatusCode.OK) { resp.bodyAsText() }
     }
-    assert(sent == "FB=1") { "expected refreshScope override on refresh grant; got $sent" }
+    assert(sent == null) { "expected Omit to send no scope; got $sent" }
   }
 
-  test("blank refreshScope omits the scope param on the refresh grant") {
+  test("RefreshScope.Explicit sends the fixed scope verbatim") {
     var sent: String? = "UNSET"
     runProxyUsage(
-      refreshScope = "",
+      refreshScope = RefreshScope.Explicit("FB=1_3_4_5"),
       captureTokenRequest = { sent = scopeSentOnRefresh(it) },
     ) { client, ctx ->
       val resp = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob)
       assert(resp.status == HttpStatusCode.OK) { resp.bodyAsText() }
     }
-    assert(sent == null) { "expected no scope param when refreshScope is blank; got $sent" }
+    assert(sent == "FB=1_3_4_5") { "expected Explicit to send its fixed scope; got $sent" }
   }
 
   test("propagates the resource server's 5xx status verbatim (transient — client retries)") {
@@ -364,7 +374,10 @@ private fun runProxyUsage(
   refreshTokenInResponse: String = "rt_mock_value",
   captureResourceRequest: ((HttpRequestData) -> Unit)? = null,
   captureTokenRequest: ((HttpRequestData) -> Unit)? = null,
-  refreshScope: String? = null,
+  refreshScope: RefreshScope = RefreshScope.Granted,
+  // The scope the utility "granted" at exchange, seeded into the blob. Pass null to simulate a
+  // custodian that echoed no scope.
+  blobScope: String? = "FB=1;IntervalDuration=900",
   quirks: UtilityQuirks = UtilityQuirks(),
   block: suspend (io.ktor.client.HttpClient, ProxyUsageCtx) -> Unit,
 ) {
@@ -426,7 +439,7 @@ private fun runProxyUsage(
       utilityId = utility.id,
       refreshToken = "rt_mock_value",
       subscriptionUri = subscriptionUri,
-      scope = utility.defaultScope,
+      scope = blobScope,
     )
   val ctx =
     ProxyUsageCtx(
