@@ -34,6 +34,18 @@ data class UtilityProfile(
    */
   val registeredScope: String = defaultScope ?: "",
   /**
+   * Scope to send on the **refresh_token** grant, decoupled from [defaultScope] (the authorize
+   * scope) because a custodian can demand different scopes at the two endpoints — e.g. Kentucky
+   * Utilities requires the full param string at `/authorize` but rejects it on refresh.
+   *
+   *  - `null` (default): replay whatever scope the utility granted at exchange (`RefreshBlob.scope`)
+   *    — RFC 6749 §6 "a subset of the granted scope"; correct for standard custodians.
+   *  - `""` (blank): send NO `scope` on refresh — RFC 6749 §6 treats an omitted scope as equal to
+   *    the originally granted scope.
+   *  - any value: send exactly that scope on the refresh grant.
+   */
+  val refreshScope: String? = null,
+  /**
    * How far back the client backfills usage on the *initial* authorization, expressed as a
    * human-friendly window (`2y`, `6m`, `90d`). Surfaced to the Home Assistant client in the claim
    * response (as seconds); the client uses it to compute `published-min` on the first fetch.

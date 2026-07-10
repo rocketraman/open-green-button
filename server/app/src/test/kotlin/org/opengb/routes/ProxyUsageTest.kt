@@ -16,8 +16,10 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
 import io.ktor.http.headersOf
+import io.ktor.http.parseQueryString
 import io.ktor.server.testing.testApplication
 import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.runBlocking
@@ -125,6 +127,41 @@ val ProxyUsageTest by testSuite {
       assert(resp.status == HttpStatusCode.Unauthorized) { resp.bodyAsText() }
       assert(resp.bodyAsText().contains("utility_auth_expired"))
     }
+  }
+
+  // Refresh scope is decoupled from the authorize scope (UtilityProfile.refreshScope).
+  test("refresh replays the granted blob scope when no refreshScope override is set") {
+    var sent: String? = "UNSET"
+    runProxyUsage(captureTokenRequest = { sent = scopeSentOnRefresh(it) }) { client, ctx ->
+      val resp = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob)
+      assert(resp.status == HttpStatusCode.OK) { resp.bodyAsText() }
+    }
+    // The harness seeds blob.scope = utility.defaultScope.
+    assert(sent == "FB=1;IntervalDuration=900") { "expected granted blob scope on refresh; got $sent" }
+  }
+
+  test("refreshScope overrides the scope sent on the refresh grant") {
+    var sent: String? = "UNSET"
+    runProxyUsage(
+      refreshScope = "FB=1",
+      captureTokenRequest = { sent = scopeSentOnRefresh(it) },
+    ) { client, ctx ->
+      val resp = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob)
+      assert(resp.status == HttpStatusCode.OK) { resp.bodyAsText() }
+    }
+    assert(sent == "FB=1") { "expected refreshScope override on refresh grant; got $sent" }
+  }
+
+  test("blank refreshScope omits the scope param on the refresh grant") {
+    var sent: String? = "UNSET"
+    runProxyUsage(
+      refreshScope = "",
+      captureTokenRequest = { sent = scopeSentOnRefresh(it) },
+    ) { client, ctx ->
+      val resp = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob)
+      assert(resp.status == HttpStatusCode.OK) { resp.bodyAsText() }
+    }
+    assert(sent == null) { "expected no scope param when refreshScope is blank; got $sent" }
   }
 
   test("propagates the resource server's 5xx status verbatim (transient — client retries)") {
@@ -288,6 +325,13 @@ private data class ProxyUsageCtx(
   val proxyToken: String,
 )
 
+// The refresh grant is an application/x-www-form-urlencoded POST (FormDataContent → ByteArrayContent);
+// pull the `scope` form param the proxy actually sent to the token endpoint.
+private fun scopeSentOnRefresh(request: HttpRequestData): String? {
+  val body = (request.body as OutgoingContent.ByteArrayContent).bytes().decodeToString()
+  return parseQueryString(body)["scope"]
+}
+
 private val testJson = Json { encodeDefaults = false }
 
 private suspend fun HttpClient.postProxyUsage(
@@ -319,6 +363,8 @@ private fun runProxyUsage(
   // Default matches the blob's refresh token, so happy-path tests see no rotation.
   refreshTokenInResponse: String = "rt_mock_value",
   captureResourceRequest: ((HttpRequestData) -> Unit)? = null,
+  captureTokenRequest: ((HttpRequestData) -> Unit)? = null,
+  refreshScope: String? = null,
   quirks: UtilityQuirks = UtilityQuirks(),
   block: suspend (io.ktor.client.HttpClient, ProxyUsageCtx) -> Unit,
 ) {
@@ -332,6 +378,7 @@ private fun runProxyUsage(
       clientId = "client_id_xyz",
       clientSecret = Masked("client_secret_xyz"),
       defaultScope = "FB=1;IntervalDuration=900",
+      refreshScope = refreshScope,
       tokenAuthStyle = TokenAuthStyle.HTTP_BASIC,
       quirks = quirks,
     )
@@ -351,6 +398,7 @@ private fun runProxyUsage(
             resourceStatus,
             tokenResponseJson,
             captureResourceRequest,
+            captureTokenRequest,
           )
         }
       }
@@ -398,14 +446,17 @@ private fun runProxyUsage(
   }
 }
 
+@Suppress("LongParameterList")
 private fun MockRequestHandleScope.handleMockRequest(
   request: HttpRequestData,
   tokenEndpointStatus: HttpStatusCode,
   resourceStatus: HttpStatusCode,
   tokenResponseJson: String,
   captureResourceRequest: ((HttpRequestData) -> Unit)?,
+  captureTokenRequest: ((HttpRequestData) -> Unit)?,
 ) = when {
   request.url.toString().startsWith("https://utility.mock/token") -> {
+    captureTokenRequest?.invoke(request)
     if (tokenEndpointStatus == HttpStatusCode.OK) {
       respond(
         content = ByteReadChannel(tokenResponseJson),

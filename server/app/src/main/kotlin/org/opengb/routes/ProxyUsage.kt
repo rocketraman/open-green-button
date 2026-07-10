@@ -118,7 +118,10 @@ private suspend fun RoutingContext.prepareFetch(
     return null
   }
 
-  val refreshed = call.refreshAccessToken(deps, utility, blob.refreshToken, blob.scope) ?: return null
+  // Refresh scope is decoupled from the authorize scope: a per-utility override wins, else replay
+  // whatever the utility granted at exchange (blob.scope). See UtilityProfile.refreshScope.
+  val refreshScope = utility.refreshScope ?: blob.scope
+  val refreshed = call.refreshAccessToken(deps, utility, blob.refreshToken, refreshScope) ?: return null
 
   // The refresh may have redeemed a ONE-TIME refresh token (savagedata/OpenIddict), invalidating the
   // blob the client holds. Emit the rotated credentials NOW — before the resource fetch — so they
@@ -269,6 +272,12 @@ private suspend fun ApplicationCall.refreshAccessToken(
     val tokens = deps.oauth.refresh(utility, refreshToken, scope)
     RefreshOutcome(accessToken = tokens.accessToken, refreshToken = tokens.refreshToken)
   } catch (e: OAuthException) {
+    // Diagnostic: since we can't drive a utility's OAuth ourselves without its end-user
+    // credentials, this is our only window onto what a live custodian (Kentucky Utilities) does on
+    // refresh — the exact scope we sent and the exact body it rejected with. Neither is a secret.
+    connectLog.warn(
+      "Refresh failed for utility=${utility.id} scopeSent=${scope ?: "(omitted)"}: ${e.message}",
+    )
     // 4xx on the token endpoint = utility rejected our refresh token (expired, revoked,
     // scope changed). HA should observe `utility_auth_expired` and trigger the reauth flow.
     // 5xx or no status = upstream transient — HA should retry, not reauth.

@@ -38,7 +38,7 @@ import org.opengb.utility.ScopeSummary
 import org.opengb.utility.UnknownUtilityException
 import org.opengb.utility.UtilityProfile
 
-private val connectLog = logger("opengb.connect")
+internal val connectLog = logger("opengb.connect")
 
 /**
  * Routes:

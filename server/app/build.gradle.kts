@@ -98,6 +98,19 @@ tasks.register<JavaExec>("onboardProbeDateFilterParam") {
   outputs.upToDateWhen { false }
 }
 
+// Operator diagnostic: replay one KU refresh token three ways (full scope / no scope / bare FB list)
+// to find which the token endpoint accepts on the refresh grant. See ProbeKentuckyRefreshScope.kt.
+//   ./gradlew :app:onboardProbeKentuckyRefreshScope --args="<encryptedRefreshBlob>"
+tasks.register<JavaExec>("onboardProbeKentuckyRefreshScope") {
+  group = "onboarding"
+  description = "Probe which scope KU accepts on the refresh grant (args: <encryptedRefreshBlob>)."
+  classpath = sourceSets["main"].runtimeClasspath
+  mainClass.set("org.opengb.onboarding.ProbeKentuckyRefreshScopeKt")
+  workingDir = rootProject.projectDir.parentFile
+  // See onboardFetchAppInfo above: a live-network diagnostic must never be treated as cacheable.
+  outputs.upToDateWhen { false }
+}
+
 // GraalVM native image — produces a self-contained binary for the scale-to-zero Fly.io
 // deployment (see ../../Dockerfile and docs/deployment.md). CIO is the only Ktor engine that
 // works under native-image; see bootable/CioKtorService.kt for why we committed to it. The
