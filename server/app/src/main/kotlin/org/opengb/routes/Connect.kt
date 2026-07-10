@@ -28,6 +28,7 @@ import kotlinx.html.summary
 import kotlinx.html.title
 import kotlinx.html.ul
 import kotlinx.html.unsafe
+import org.apache.logging.log4j.kotlin.logger
 import org.opengb.AppDeps
 import org.opengb.oauth.ClaimRecord
 import org.opengb.oauth.OAuthException
@@ -36,6 +37,8 @@ import org.opengb.proxy.RefreshBlob
 import org.opengb.utility.ScopeSummary
 import org.opengb.utility.UnknownUtilityException
 import org.opengb.utility.UtilityProfile
+
+private val connectLog = logger("opengb.connect")
 
 /**
  * Routes:
@@ -97,6 +100,12 @@ private suspend fun io.ktor.server.routing.RoutingContext.handleStart(deps: AppD
       if (utility.defaultScope != null) parameters.append("scope", utility.defaultScope)
       parameters.append("state", state)
     }.buildString()
+  // No logger emits the outbound authorize redirect otherwise (the access log records only
+  // method/path/status, and this is a server-side 302, not an HttpClient call). Log it so we can
+  // confirm whether `scope` is actually sent — the URL carries client_id/state but no secret.
+  connectLog.info(
+    "authorize redirect utility=${utility.id} scopeSent=${utility.defaultScope != null} url=$url",
+  )
   call.respondRedirect(url, permanent = false)
 }
 
@@ -170,7 +179,7 @@ private suspend fun io.ktor.server.routing.RoutingContext.exchangeAndBuildBlob(
     try {
       deps.oauth.exchangeCode(utility, code, redirectUri)
     } catch (e: OAuthException) {
-      call.application.environment.log.warn(
+      connectLog.warn(
         "Token exchange failed for utility=${utility.id}: ${e.message}",
       )
       call.respondCallbackError("Could not exchange authorization code with utility.")
@@ -181,6 +190,12 @@ private suspend fun io.ktor.server.routing.RoutingContext.exchangeAndBuildBlob(
     call.respondCallbackError("Utility did not issue a refresh token.")
     return null
   }
+  // The scope the utility echoes here IS the granted scope we replay on refresh. Logged so we can
+  // see whether a custodian (e.g. Kentucky Utilities) returns a granted scope at all, and if so
+  // whether it's the bare FB list (params stripped) vs. what we requested. No secrets in a scope.
+  connectLog.info(
+    "Token exchange ok for utility=${utility.id}: grantedScope=${tokens.scope}",
+  )
   // Persist ONLY the scope the utility actually granted (echoed in the token response). This value
   // is re-sent verbatim as the `scope` param on every refresh_token grant (ProxyUsage.refreshAccess
   // Token → OAuthClient.refresh), so it must be a scope the utility will accept back — never our
