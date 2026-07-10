@@ -73,11 +73,8 @@ class OAuthClient(private val clients: UtilityHttpClients, private val json: Jso
     post(utility) {
       append("grant_type", "refresh_token")
       append("refresh_token", refreshToken)
-      // RFC 6749 §6 says an omitted `scope` here means "same as originally granted", but some
-      // custodians (e.g. Kentucky Utilities' My Meter platform) don't honor that default and
-      // reject the bare refresh with `invalid_scope`. Resending the scope the token response
-      // actually granted (persisted on the RefreshBlob) satisfies those custodians and is a
-      // no-op for the ones that already default correctly.
+      // RFC 6749 §6 says an omitted `scope` here means "same as originally granted"
+      // some utilities seem to reject an explicit scope here, even if it the same as requested
       if (!scope.isNullOrBlank()) append("scope", scope)
     }
 
