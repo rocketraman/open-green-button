@@ -62,6 +62,3 @@ mise.local.toml
 *.jks
 *.csr
 *.srl
-ogb-ca.crt
-ogb-client.crt
-ogb-client.ext
