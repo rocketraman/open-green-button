@@ -73,7 +73,7 @@ private suspend fun io.ktor.server.routing.RoutingContext.handleScopeScreen(deps
     renderScopeScreen(
       utility = utility,
       continueUrl = continueUrl,
-      scopeLines = ScopeSummary.describe(utility.defaultScope),
+      scopeLines = ScopeSummary.describe(utility.registeredScope),
       historyText = humanizeWindow(utility.initialHistory),
     )
   }
@@ -94,7 +94,7 @@ private suspend fun io.ktor.server.routing.RoutingContext.handleStart(deps: AppD
       parameters.append("response_type", "code")
       parameters.append("client_id", utility.clientId)
       parameters.append("redirect_uri", redirectUri)
-      parameters.append("scope", utility.defaultScope)
+      if (utility.defaultScope != null) parameters.append("scope", utility.defaultScope)
       parameters.append("state", state)
     }.buildString()
   call.respondRedirect(url, permanent = false)
@@ -181,19 +181,23 @@ private suspend fun io.ktor.server.routing.RoutingContext.exchangeAndBuildBlob(
     call.respondCallbackError("Utility did not issue a refresh token.")
     return null
   }
-  // ESPI authorization comes in two flavours and we support both:
-  //   - FB_14 "legacy" / pre-negotiated scope: scope is fixed at registration time; the
-  //     utility may omit `scope` from the token response entirely. Fall back to the requested
-  //     scope so downstream code always has something to persist.
-  //   - FB_31 "modern" / scope negotiated at OAuth time: the customer can edit the scope on
-  //     the consent screen, and the utility returns the *granted* scope in the token response,
-  //     possibly a subset of what we asked for. Persist that.
+  // Persist ONLY the scope the utility actually granted (echoed in the token response). This value
+  // is re-sent verbatim as the `scope` param on every refresh_token grant (ProxyUsage.refreshAccess
+  // Token → OAuthClient.refresh), so it must be a scope the utility will accept back — never our
+  // requested/registered string. If the utility omits scope from the token response, persist null:
+  //   - FB_31 "modern" utilities echo the *granted* scope (possibly a subset the customer edited);
+  //     that's exactly what we want to replay on refresh.
+  //   - FB_14 "legacy" / pre-negotiated utilities (and Kentucky Utilities, where we omit `scope`
+  //     from the request entirely) may return no scope. null ⇒ refresh omits `scope`, which per
+  //     RFC 6749 §6 means "same as originally granted" — the safe default, and it avoids re-sending
+  //     KU the param string it rejects. (registeredScope is a consent-screen/display value and
+  //     deliberately does NOT flow here.)
   return RefreshBlob(
     utilityId = utility.id,
     refreshToken = refreshToken,
     subscriptionUri = tokens.resourceUri,
     authorizationUri = tokens.authorizationUri,
-    scope = tokens.scope ?: utility.defaultScope,
+    scope = tokens.scope,
   )
 }
 
@@ -249,7 +253,7 @@ private fun HTML.renderScopeScreen(
     details {
       summary { +"Show the exact data-sharing scope" }
       div("code-box code-box--left") {
-        code { +utility.defaultScope }
+        code { +utility.registeredScope }
       }
     }
   }

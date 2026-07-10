@@ -166,9 +166,10 @@ val OAuthFlowEndToEndTest by testSuite {
   }
 
   // Legacy / FB_14 auth: utility doesn't echo the granted scope in the token response (because
-  // scope was pre-negotiated at registration). The persisted blob must fall back to the
-  // requested scope so downstream code always has something to read.
-  test("blob falls back to defaultScope when utility omits scope (legacy / pre-negotiated auth)") {
+  // scope was pre-negotiated at registration). We persist null rather than fabricating a scope —
+  // blob.scope is replayed on refresh, and an omitted `scope` means "same as granted" (RFC 6749
+  // §6), which avoids re-sending a scope the utility might reject.
+  test("blob scope is null when the utility omits scope (legacy / pre-negotiated auth)") {
     runE2E(omitScope = true) { client, ctx ->
       val location =
         client.get("/connect/mock/start").headers[HttpHeaders.Location]
@@ -184,8 +185,8 @@ val OAuthFlowEndToEndTest by testSuite {
 
       val crypto = TokenCrypto(ctx.config.crypto)
       val blob = crypto.decrypt(extractField(redeemBody, "encryptedRefreshBlob"))
-      assert(blob.scope == ctx.utility.defaultScope) {
-        "expected fallback to defaultScope when utility omits scope; got ${blob.scope}"
+      assert(blob.scope == null) {
+        "expected null scope (so refresh omits it) when utility omits scope; got ${blob.scope}"
       }
     }
   }
@@ -200,9 +201,27 @@ val OAuthFlowEndToEndTest by testSuite {
       // Plain-English summary for FB=1 (present in the mock defaultScope).
       assert(html.contains("meters and service points", ignoreCase = true)) { html }
       // The exact scope string is shown verbatim for transparency.
-      assert(html.contains(ctx.utility.defaultScope)) { html }
+      assert(html.contains(ctx.utility.registeredScope)) { html }
       // And the button continues to the OAuth start route for this utility.
       assert(html.contains("/connect/mock/start")) { html }
+    }
+  }
+
+  // Kentucky-Utilities style: defaultScope = null. We must omit `scope` from the authorize request
+  // entirely (so the utility applies its registration-time scope per RFC 6749 §3.3), while the
+  // consent screen still describes registeredScope — our record of what the utility will grant.
+  test("null defaultScope omits scope on the authorize redirect but still shows registeredScope") {
+    runE2E(defaultScope = null, registeredScope = "FB=1_3_4_5") { client, _ ->
+      val location =
+        client.get("/connect/mock/start").headers[HttpHeaders.Location]
+          ?: error("Location header missing")
+      val query = parseQueryString(location.substringAfter('?', ""))
+      assert(query["scope"] == null) { "scope must be omitted from the request; got ${query["scope"]}" }
+
+      val html = client.get("/connect/mock/scope").bodyAsText()
+      // Verbatim registered scope + its plain-English summary (FB=1 → meters and service points).
+      assert(html.contains("FB=1_3_4_5")) { html }
+      assert(html.contains("meters and service points", ignoreCase = true)) { html }
     }
   }
 
@@ -268,6 +287,8 @@ private data class TestCtx(
 @Suppress("LongMethod")
 private fun runE2E(
   omitScope: Boolean = false,
+  defaultScope: String? = "FB=1;IntervalDuration=900",
+  registeredScope: String? = null,
   block: suspend (io.ktor.client.HttpClient, TestCtx) -> Unit,
 ) {
   val publicBaseUrl = "http://test.local"
@@ -279,11 +300,13 @@ private fun runE2E(
       tokenUrl = "https://utility.mock/token",
       clientId = "client_id_xyz",
       clientSecret = Masked("client_secret_xyz"),
-      defaultScope = "FB=1;IntervalDuration=900",
+      defaultScope = defaultScope,
+      registeredScope = registeredScope ?: defaultScope ?: "",
       tokenAuthStyle = TokenAuthStyle.HTTP_BASIC,
     )
 
-  val scopeField = if (omitScope) "" else """"scope":"${utility.defaultScope}","""
+  val scopeField =
+    if (omitScope || defaultScope == null) "" else """"scope":"$defaultScope","""
   val tokenResponseJson =
     """
     {"access_token":"at_mock","refresh_token":"rt_mock_value",

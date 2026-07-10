@@ -70,7 +70,6 @@ fun main(args: Array<String>) {
       tokenUrl = MILTON_TOKEN_URL,
       clientId = MILTON_CLIENT_ID,
       clientSecret = Masked(clientSecret),
-      defaultScope = "unused",
       tokenAuthStyle = TokenAuthStyle.HTTP_BASIC,
     )
 

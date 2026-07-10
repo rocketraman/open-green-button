@@ -36,7 +36,8 @@ object ScopeSummary {
     )
 
   /** Human-readable bullet points describing the data groups the [scope] authorizes. */
-  fun describe(scope: String): List<String> {
+  fun describe(scope: String?): List<String> {
+    if (scope == null) return emptyList()
     val fbs = parseFunctionBlocks(scope)
     val lines = buckets.filter { bucket -> bucket.fbs.any(fbs::contains) }.map { it.label }.toMutableList()
     val covered = buckets.flatMapTo(mutableSetOf()) { it.fbs }

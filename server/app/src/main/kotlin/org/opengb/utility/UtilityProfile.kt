@@ -17,7 +17,22 @@ data class UtilityProfile(
   val tokenUrl: String,
   val clientId: String,
   val clientSecret: Masked,
-  val defaultScope: String,
+  /**
+   * Scope string sent verbatim as the `scope` param on the authorization request, or `null` to
+   * omit `scope` entirely — in which case (RFC 6749 §3.3) the utility applies the scope fixed at
+   * registration time. Set to `null` for custodians (e.g. Kentucky Utilities) that reject an
+   * explicit `scope` with `invalid_scope`; record what they registered in [registeredScope].
+   */
+  val defaultScope: String? = null,
+  /**
+   * The scope of record shown to the customer on the consent screen (plain-English bullets +
+   * verbatim string) and persisted when the utility doesn't echo a granted scope. It's what
+   * actually applies whether we send it or the utility falls back to its registration default, so
+   * it's the display/persistence source of truth. Defaults to [defaultScope] (DRY — utilities that
+   * send a scope never repeat it); set explicitly only when [defaultScope] is `null`. Empty only
+   * when a profile configures neither, a misconfiguration that renders as nothing.
+   */
+  val registeredScope: String = defaultScope ?: "",
   /**
    * How far back the client backfills usage on the *initial* authorization, expressed as a
    * human-friendly window (`2y`, `6m`, `90d`). Surfaced to the Home Assistant client in the claim
