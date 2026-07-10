@@ -68,10 +68,14 @@ class OAuthClient(private val clients: UtilityHttpClients, private val json: Jso
   suspend fun refresh(
     utility: UtilityProfile,
     refreshToken: String,
+    scope: String? = null,
   ): TokenResponse =
     post(utility) {
       append("grant_type", "refresh_token")
       append("refresh_token", refreshToken)
+      // RFC 6749 §6 says an omitted `scope` here means "same as originally granted"
+      // some utilities seem to reject an explicit scope here, even if it the same as requested
+      if (!scope.isNullOrBlank()) append("scope", scope)
     }
 
   /**

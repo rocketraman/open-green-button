@@ -118,7 +118,7 @@ private suspend fun RoutingContext.prepareFetch(
     return null
   }
 
-  val refreshed = call.refreshAccessToken(deps, utility, blob.refreshToken) ?: return null
+  val refreshed = call.refreshAccessToken(deps, utility, blob.refreshToken, blob.scope) ?: return null
 
   // The refresh may have redeemed a ONE-TIME refresh token (savagedata/OpenIddict), invalidating the
   // blob the client holds. Emit the rotated credentials NOW — before the resource fetch — so they
@@ -263,9 +263,10 @@ private suspend fun ApplicationCall.refreshAccessToken(
   deps: AppDeps,
   utility: UtilityProfile,
   refreshToken: String,
+  scope: String?,
 ): RefreshOutcome? =
   try {
-    val tokens = deps.oauth.refresh(utility, refreshToken)
+    val tokens = deps.oauth.refresh(utility, refreshToken, scope)
     RefreshOutcome(accessToken = tokens.accessToken, refreshToken = tokens.refreshToken)
   } catch (e: OAuthException) {
     // 4xx on the token endpoint = utility rejected our refresh token (expired, revoked,

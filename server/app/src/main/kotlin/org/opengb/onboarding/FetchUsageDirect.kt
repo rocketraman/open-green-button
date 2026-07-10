@@ -99,7 +99,7 @@ fun main(args: Array<String>) {
       val subscriptionUri = blob.subscriptionUri ?: error("no subscriptionUri in blob")
 
       // 3) refresh (rotates the one-time RT once) → a (savagedata makes these long-lived) access token
-      val token = oauth.refresh(utility, blob.refreshToken)
+      val token = oauth.refresh(utility, blob.refreshToken, blob.scope)
       println("refreshed ok; expires_in=${token.expiresIn}")
       // SENSITIVE (sandbox usage-data token) — paste these two to drive raw curl experiments without
       // burning another claim; the token is effectively non-expiring.

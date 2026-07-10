@@ -101,7 +101,7 @@ fun main(args: Array<String>) {
       // 2) refresh → a real access token. Reusable refresh tokens on this platform (confirmed), so
       // this does not strand HA's stored credentials even if the response carries a new one.
       // Neither token is ever printed in full — see the SECRET HANDLING note above.
-      val token = oauth.refresh(utility, blob.refreshToken)
+      val token = oauth.refresh(utility, blob.refreshToken, blob.scope)
       println("refreshed ok; expires_in=${token.expiresIn}")
       if (token.refreshToken != null && token.refreshToken != blob.refreshToken) {
         println(
