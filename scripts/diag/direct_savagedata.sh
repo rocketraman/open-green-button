@@ -36,7 +36,7 @@ MTLS=(--cert "$TMP/cert.pem" --key "$TMP/key.pem")
 
 echo "== 1) client_credentials (mTLS) → registration_access_token =="
 TOKJSON="$(curl -sS "${MTLS[@]}" \
-  -u "$OPENGB_ONBOARD_MILTON_HYDRO_REG_CLIENT_ID:$OPENGB_ONBOARD_MILTON_HYDRO_REG_CLIENT_SECRET" \
+  -u "$OPENGB_UTILITY_MILTON_HYDRO_CLIENTID:$OPENGB_UTILITY_MILTON_HYDRO_CLIENTSECRET" \
   -d grant_type=client_credentials \
   --data-urlencode "scope=${OPENGB_ONBOARD_MILTON_HYDRO_REG_SCOPE:-}" \
   "$OPENGB_ONBOARD_MILTON_HYDRO_TOKEN_URL")"

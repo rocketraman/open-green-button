@@ -32,8 +32,8 @@ import org.opengb.utility.TokenAuthStyle
  *   ./gradlew :app:onboardFetchAppInfo --args="milton_hydro"
  *
  * Reads `OPENGB_ONBOARD_<ID>_*` for registration-specific inputs (token URL, ApplicationInformation
- * URL, registration client creds, scope) and `OPENGB_UTILITY_<ID>_CLIENTAUTH_*` for the shared mTLS
- * keystore, where `<ID>` is the upper-cased utility id (milton_hydro → MILTON_HYDRO).
+ * URL, scope) and `OPENGB_UTILITY_<ID>_*` for everything shared with the running server (client
+ * id/secret + mTLS keystore), where `<ID>` is the upper-cased utility id (milton_hydro → MILTON_HYDRO).
  */
 private const val ENV_PREFIX = "OPENGB_ONBOARD_"
 private const val UTILITY_ENV_PREFIX = "OPENGB_UTILITY_"
@@ -47,8 +47,10 @@ fun main(args: Array<String>) {
   val id = utilityId.uppercase().replace('-', '_')
   val tokenUrl = env.require("${id}_TOKEN_URL")
   val appInfoUrl = env.require("${id}_APP_INFO_URL")
-  val regClientId = env.require("${id}_REG_CLIENT_ID")
-  val regClientSecret = env.require("${id}_REG_CLIENT_SECRET")
+  // The registration client_credentials grant uses the utility's own client id/secret — the same
+  // runtime OPENGB_UTILITY_<ID>_* values the server uses, not a parallel OPENGB_ONBOARD_ copy.
+  val regClientId = env.requireUtility("${id}_CLIENTID")
+  val regClientSecret = env.requireUtility("${id}_CLIENTSECRET")
   val regScope = env.optional("${id}_REG_SCOPE")
   val authStyle =
     env.optional("${id}_TOKEN_AUTH_STYLE")?.let { TokenAuthStyle.valueOf(it.trim().uppercase()) }

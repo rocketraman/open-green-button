@@ -42,14 +42,12 @@ OPENGB_UTILITY_MILTON_HYDRO_CLIENTAUTH_KEYSTOREBASE64 = ""       # base64 -w0 of
 OPENGB_UTILITY_MILTON_HYDRO_CLIENTAUTH_KEYSTOREPASSWORD = ""
 #
 # Onboarding-driver registration inputs — consumed by `:app:onboardFetchAppInfo` and
-# scripts/diag/direct_savagedata.sh (plain env; the bash script can't parse HOCON). TOKEN_URL and
-# REG_CLIENT_ID mirror the milton_hydro block in utilities.conf (that block is the source of truth,
-# repeated here only because the operator drivers take them as env). APP_INFO_URL comes from the
-# onboarding notification (log field notify.resources); REG_SCOPE is what savagedata registered.
-# The shared client_id + client_secret alias the runtime values above; the shared mTLS keystore is
-# read straight from the OPENGB_UTILITY_ keys (no onboarding copy).
+# scripts/diag/direct_savagedata.sh (plain env; the bash script can't parse HOCON). TOKEN_URL mirrors
+# the milton_hydro block in utilities.conf (that block is the source of truth, repeated here only
+# because the operator drivers take it as env). APP_INFO_URL comes from the onboarding notification
+# (log field notify.resources); REG_SCOPE is what savagedata registered.
+# Everything shared with the running server — the client id/secret and the mTLS keystore — is read
+# straight from the OPENGB_UTILITY_ keys above; only registration-specific inputs live here.
 OPENGB_ONBOARD_MILTON_HYDRO_TOKEN_URL = ""
 OPENGB_ONBOARD_MILTON_HYDRO_APP_INFO_URL = ""
 OPENGB_ONBOARD_MILTON_HYDRO_REG_SCOPE = ""
-OPENGB_ONBOARD_MILTON_HYDRO_REG_CLIENT_ID = "{{ env.OPENGB_UTILITY_MILTON_HYDRO_CLIENTID }}"
-OPENGB_ONBOARD_MILTON_HYDRO_REG_CLIENT_SECRET = "{{ env.OPENGB_UTILITY_MILTON_HYDRO_CLIENTSECRET }}"
