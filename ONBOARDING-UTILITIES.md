@@ -35,11 +35,11 @@ That is the purpose this document.
    If you are asked for URIs, create a lower-case path slug for the utility e.g. `burlington_hydro` for Burlington Hydro.
    See the following table, replace `<utility_slug>` with the slug you created:
 
-   | Form Field | URI |
-   | ------------- | ------------- |
-   | Redirect URI | https://api.opengreenbutton.com/connect/<utility_slug>/callback |
-   | Notification URI | https://api.opengreenbutton.com/notify/<utility_slug> |
-   | Logo URI | https://opengreenbutton.org/logo-horizontal.svg |
+   | Form Field | URI                                                                                                         |
+   | ------------- |----------------------------------------------------------------------------------------------------------|
+   | Redirect URI | https://api.opengreenbutton.org/connect/<utility_slug>/callback                                           |
+   | Notification URI | https://api.opengreenbutton.org/notify/<utility_slug>                                                 |
+   | Logo URI | https://raw.githubusercontent.com/rocketraman/open-green-button/refs/heads/master/branding/logo-horizontal.svg|
 
    If you are asked for an SSL certificate, first try `ogb-ca.crt` from the `certs/` directory.
    If that doesn't work, try `ogb-client.crt`.
