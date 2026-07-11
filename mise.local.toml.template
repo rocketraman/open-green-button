@@ -1,0 +1,55 @@
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Open Green Button — local secrets & machine config (mise-native).
+#
+# Copy to `mise.local.toml` (gitignored) and fill in. mise injects [env] into the process
+# environment, so any mise-activated shell (or `mise exec -- ./gradlew …`) exposes every value to:
+#   • the server   — via HOCON ${?VAR} substitution in utilities.conf / application.conf
+#   • the onboarding drivers & scripts/diag/* — via System.getenv / plain env
+#
+# CONVENTIONS
+#   • Non-secret per-utility config (endpoints, clientId, scopes, paths) lives in utilities.conf,
+#     NOT here. This file holds only secrets + machine-local values, one section per utility.
+#   • A value needed under two names (runtime + onboarding driver) is defined ONCE and aliased with
+#     mise templating `{{ env.OTHER_KEY }}` — never paste a secret twice. The alias lines below are
+#     structural; leave them as-is and only fill in the primary (runtime) value.
+#
+# Production values are Fly secrets (write-only). Read one off the running machine with:
+#   fly -a open-green-button ssh console -C 'printenv <KEY>'
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+[env]
+
+# ── machine / account ─────────────────────────────────────────────────────────────────────────
+FLY_API_TOKEN = ""
+# 32-byte AES-GCM key (base64). Decrypts EVERY user's refresh blob — production Fly secret; keep local.
+OPENGB_CRYPTO_AESKEYBASE64 = ""
+
+# ── Burlington Hydro (production) ─────────────────────────────────────────────────────────────
+OPENGB_UTILITY_BURLINGTON_HYDRO_CLIENTID = ""
+OPENGB_UTILITY_BURLINGTON_HYDRO_CLIENTSECRET = ""
+
+# ── Kentucky Utilities (production) ───────────────────────────────────────────────────────────
+OPENGB_UTILITY_KENTUCKY_UTILITIES_CLIENTID = ""
+OPENGB_UTILITY_KENTUCKY_UTILITIES_CLIENTSECRET = ""
+
+# ── Green Button Test Lab (London Hydro cert harness) ─────────────────────────────────────────
+OPENGB_UTILITY_GREENBUTTON_TEST_LAB_CLIENTSECRET = ""
+
+# ── Milton Hydro (savagedata sandbox DC) ──────────────────────────────────────────────────────
+# Runtime (server) secrets — consumed via utilities.conf ${?…} substitution.
+OPENGB_UTILITY_MILTON_HYDRO_CLIENTID = ""
+OPENGB_UTILITY_MILTON_HYDRO_CLIENTSECRET = ""
+OPENGB_UTILITY_MILTON_HYDRO_CLIENTAUTH_KEYSTOREBASE64 = ""       # base64 -w0 of the leaf-cert PKCS12
+OPENGB_UTILITY_MILTON_HYDRO_CLIENTAUTH_KEYSTOREPASSWORD = ""
+#
+# Onboarding-driver registration inputs — consumed by `:app:onboardFetchAppInfo` and
+# scripts/diag/direct_savagedata.sh (plain env; the bash script can't parse HOCON). TOKEN_URL and
+# REG_CLIENT_ID mirror the milton_hydro block in utilities.conf (that block is the source of truth,
+# repeated here only because the operator drivers take them as env). APP_INFO_URL comes from the
+# onboarding notification (log field notify.resources); REG_SCOPE is what savagedata registered.
+# The shared client_id + client_secret alias the runtime values above; the shared mTLS keystore is
+# read straight from the OPENGB_UTILITY_ keys (no onboarding copy).
+OPENGB_ONBOARD_MILTON_HYDRO_TOKEN_URL = ""
+OPENGB_ONBOARD_MILTON_HYDRO_APP_INFO_URL = ""
+OPENGB_ONBOARD_MILTON_HYDRO_REG_SCOPE = ""
+OPENGB_ONBOARD_MILTON_HYDRO_REG_CLIENT_ID = "{{ env.OPENGB_UTILITY_MILTON_HYDRO_CLIENTID }}"
+OPENGB_ONBOARD_MILTON_HYDRO_REG_CLIENT_SECRET = "{{ env.OPENGB_UTILITY_MILTON_HYDRO_CLIENTSECRET }}"

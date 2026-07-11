@@ -10,7 +10,6 @@ import org.opengb.oauth.OAuthException
 import org.opengb.proxy.TokenCrypto
 import org.opengb.utility.TokenAuthStyle
 import org.opengb.utility.UtilityProfile
-import java.io.File
 
 /**
  * Operator diagnostic — determine which `scope` value Kentucky Utilities' token endpoint accepts on
@@ -47,9 +46,9 @@ import java.io.File
  *
  *   ./gradlew :app:onboardProbeKentuckyRefreshScope --args="<encryptedRefreshBlob>"
  *
- * Requires in the gitignored .env (Fly secrets):
+ * Requires in mise.local.toml (Fly secrets):
  *   OPENGB_CRYPTO_AESKEYBASE64                        — decrypts the refresh blob
- *   OPENGB_UTILITY_KENTUCKY_UTILITIES_CLIENTID        — the KU-issued client_id (e.g. gbc_16)
+ *   OPENGB_UTILITY_KENTUCKY_UTILITIES_CLIENTID        — the KU-issued client_id
  *   OPENGB_UTILITY_KENTUCKY_UTILITIES_CLIENTSECRET    — the OAuth client secret, for the refresh grant
  * Optional (only if this deployment presents a client cert; most don't — see ProbeDateFilterParam):
  *   OPENGB_CLIENTAUTH_KEYSTOREBASE64 / …PASSWORD / …TYPE / …KEYALIAS / …KEYPASSWORD
@@ -72,7 +71,7 @@ fun main(args: Array<String>) {
   val encryptedBlob =
     args.getOrNull(0)?.takeIf { it.isNotBlank() }
       ?: error("usage: onboardProbeKentuckyRefreshScope <encryptedRefreshBlob>")
-  val env = dotenv()
+  val env = System.getenv()
   val aesKey = env("OPENGB_CRYPTO_AESKEYBASE64", env)
   val crypto = TokenCrypto(CryptoConfig(aesKeyBase64 = Masked(aesKey), hmacPepperBase64 = Masked(DUMMY_PEPPER_B64)))
   val utility = kentuckyProfile(env)
@@ -156,23 +155,10 @@ private fun env(
   dotenv: Map<String, String>,
 ): String =
   optionalEnv(key, dotenv)
-    ?: error("missing required config: set $key in the environment or .env")
+    ?: error("missing required config: set $key via mise (mise.local.toml)")
 
 private fun optionalEnv(
   key: String,
   dotenv: Map<String, String>,
 ): String? = System.getenv(key)?.takeIf { it.isNotBlank() } ?: dotenv[key]?.takeIf { it.isNotBlank() }
 
-/** Minimal .env loader: search the working dir and ancestors for the first `.env`. */
-private fun dotenv(): Map<String, String> {
-  val file =
-    generateSequence(File("").absoluteFile) { it.parentFile }
-      .map { File(it, ".env") }
-      .firstOrNull { it.isFile } ?: return emptyMap()
-  return file.readLines().mapNotNull { line ->
-    val t = line.trim().removePrefix("export ").trim()
-    if (t.isEmpty() || t.startsWith("#")) return@mapNotNull null
-    val eq = t.indexOf('=').takeIf { it > 0 } ?: return@mapNotNull null
-    t.substring(0, eq).trim() to t.substring(eq + 1).trim().trim('"', '\'')
-  }.toMap()
-}

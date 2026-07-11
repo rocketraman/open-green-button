@@ -54,16 +54,16 @@ application {
 
 // Operator-only entrypoint for ESPI 3.3 onboarding (dynamic client registration): fetch & dump a
 // utility's ApplicationInformation. A dev tool run on the JVM — not wired into the server and not
-// reachable from the native image (mainClass above stays org.opengb.AppKt). Reads a gitignored
-// .env at the repo root (see ../../.env.template).
+// reachable from the native image (mainClass above stays org.opengb.AppKt). Config comes from mise
+// (mise.local.toml [env]; see ../../mise.local.toml.template) via the process environment.
 //   ./gradlew :app:onboardFetchAppInfo --args="milton_hydro"
 tasks.register<JavaExec>("onboardFetchAppInfo") {
   group = "onboarding"
   description = "Fetch & dump a utility's ESPI ApplicationInformation (arg: <utilityId>)."
   classpath = sourceSets["main"].runtimeClasspath
   mainClass.set("org.opengb.onboarding.FetchAppInfoKt")
-  // Run from the git root so the driver's .env search finds open-green-button/.env. (rootProject
-  // is server/, so its parent is the git root.)
+  // Run from the git root so any files the driver writes land at the repo root. (rootProject is
+  // server/, so its parent is the git root.) Config is read from the environment (mise), not a file.
   workingDir = rootProject.projectDir.parentFile
   // Operator diagnostic that hits a live remote endpoint on every invocation — Gradle has no way
   // to know that (it declares no outputs), so without this it can mark a rerun with identical
@@ -72,8 +72,8 @@ tasks.register<JavaExec>("onboardFetchAppInfo") {
 }
 
 // Diagnostic: hit savagedata's usage resource DIRECTLY (bypassing the deployed proxy) to see the
-// raw response for a CMD usage request. Reuses the prod crypto/OAuth/fetch code paths. Reads the
-// gitignored .env for OPENGB_CRYPTO_AESKEYBASE64 + OPENGB_UTILITY_MILTON_HYDRO_CLIENTSECRET.
+// raw response for a CMD usage request. Reuses the prod crypto/OAuth/fetch code paths. Reads
+// OPENGB_CRYPTO_AESKEYBASE64 + OPENGB_UTILITY_MILTON_HYDRO_CLIENTSECRET from mise (mise.local.toml).
 //   ./gradlew :app:onboardFetchUsageDirect --args="<claimCode> [dateFilterParam]"
 tasks.register<JavaExec>("onboardFetchUsageDirect") {
   group = "onboarding"

@@ -15,7 +15,6 @@ import org.opengb.http.UtilityHttpClients
 import org.opengb.oauth.ClientCredentialsRequest
 import org.opengb.oauth.OAuthClient
 import org.opengb.utility.TokenAuthStyle
-import java.io.File
 
 /**
  * Operator driver for ESPI 3.3 dynamic-client-registration onboarding — **not** part of the server
@@ -27,20 +26,23 @@ import java.io.File
  *      dumps every field, so we can read off the real client_id/client_secret + endpoints and wire
  *      them into `utilities.conf`.
  *
- * Config comes from a gitignored `.env` (see `.env.template`) via utility-specific keys so the same
- * driver serves every utility we onboard:
+ * Config comes from mise (`mise.local.toml`, see `mise.local.toml.template`) via utility-specific
+ * keys so the same driver serves every utility we onboard:
  *
  *   ./gradlew :app:onboardFetchAppInfo --args="milton_hydro"
  *
- * Reads `OPENGB_ONBOARD_<ID>_*` where `<ID>` is the upper-cased utility id (milton_hydro → MILTON_HYDRO).
+ * Reads `OPENGB_ONBOARD_<ID>_*` for registration-specific inputs (token URL, ApplicationInformation
+ * URL, registration client creds, scope) and `OPENGB_UTILITY_<ID>_CLIENTAUTH_*` for the shared mTLS
+ * keystore, where `<ID>` is the upper-cased utility id (milton_hydro → MILTON_HYDRO).
  */
 private const val ENV_PREFIX = "OPENGB_ONBOARD_"
+private const val UTILITY_ENV_PREFIX = "OPENGB_UTILITY_"
 
 fun main(args: Array<String>) {
   val utilityId =
     args.getOrNull(0)?.takeIf { it.isNotBlank() }
       ?: error("usage: onboardFetchAppInfo <utilityId>  (e.g. milton_hydro)")
-  val env = OnboardingEnv(utilityId, dotenv = loadDotenv(args.getOrNull(1)))
+  val env = OnboardingEnv(utilityId)
 
   val id = utilityId.uppercase().replace('-', '_')
   val tokenUrl = env.require("${id}_TOKEN_URL")
@@ -52,13 +54,16 @@ fun main(args: Array<String>) {
     env.optional("${id}_TOKEN_AUTH_STYLE")?.let { TokenAuthStyle.valueOf(it.trim().uppercase()) }
       ?: TokenAuthStyle.HTTP_BASIC
 
+  // The mTLS leaf cert is one physical credential used at both registration and runtime, so read it
+  // from the SAME OPENGB_UTILITY_<ID>_CLIENTAUTH_* env keys the running server uses (utilities.conf's
+  // per-utility clientAuth block) rather than a parallel OPENGB_ONBOARD_ copy.
   val clientAuth =
     ClientAuthConfig(
-      keystoreBase64 = Masked(env.require("${id}_CLIENTAUTH_KEYSTORE_BASE64")),
-      keystorePassword = Masked(env.require("${id}_CLIENTAUTH_KEYSTORE_PASSWORD")),
-      keystoreType = env.optional("${id}_CLIENTAUTH_KEYSTORE_TYPE") ?: "PKCS12",
-      keyAlias = env.optional("${id}_CLIENTAUTH_KEY_ALIAS"),
-      keyPassword = env.optional("${id}_CLIENTAUTH_KEY_PASSWORD")?.let { Masked(it) },
+      keystoreBase64 = Masked(env.requireUtility("${id}_CLIENTAUTH_KEYSTOREBASE64")),
+      keystorePassword = Masked(env.requireUtility("${id}_CLIENTAUTH_KEYSTOREPASSWORD")),
+      keystoreType = env.optionalUtility("${id}_CLIENTAUTH_KEYSTORETYPE") ?: "PKCS12",
+      keyAlias = env.optionalUtility("${id}_CLIENTAUTH_KEYALIAS"),
+      keyPassword = env.optionalUtility("${id}_CLIENTAUTH_KEYPASSWORD")?.let { Masked(it) },
     )
 
   val http: HttpClient = UtilityHttpClients.mtlsClient(clientAuth)
@@ -142,44 +147,29 @@ private fun mask(value: String): String = if (value.length <= 12) "***" else "${
 
 private class OnboardingEnv(
   val utilityId: String,
-  private val dotenv: Map<String, String>,
 ) {
-  // Real process environment wins over .env, matching conventional dotenv precedence.
+  // mise injects mise.local.toml [env] into the process environment; read it directly.
   private fun raw(key: String): String? =
     System.getenv(ENV_PREFIX + key)?.takeIf { it.isNotBlank() }
-      ?: dotenv[ENV_PREFIX + key]?.takeIf { it.isNotBlank() }
 
   fun optional(key: String): String? = raw(key)
 
   fun require(key: String): String =
     raw(key)
       ?: error(
-        "missing required config for '$utilityId': set $ENV_PREFIX$key in the environment or .env",
+        "missing required config for '$utilityId': set $ENV_PREFIX$key via mise (mise.local.toml)",
       )
-}
 
-/**
- * Loads a `.env` into a map. If [explicitPath] is given it must exist; otherwise search the working
- * directory and its ancestors for the first `.env`. Missing/absent file ⇒ empty map (values may then
- * come from the real environment). Supports `KEY=VALUE`, `export KEY=VALUE`, `#` comments, and
- * single/double-quoted values.
- */
-private fun loadDotenv(explicitPath: String?): Map<String, String> {
-  val file =
-    if (explicitPath != null) {
-      File(explicitPath).also { require(it.isFile) { "no .env at $explicitPath" } }
-    } else {
-      generateSequence(File("").absoluteFile) { it.parentFile }
-        .map { File(it, ".env") }
-        .firstOrNull { it.isFile }
-    } ?: return emptyMap()
+  // Same, but for the runtime OPENGB_UTILITY_ namespace (config the running server also reads) — used
+  // for credentials shared between registration and runtime, e.g. the per-utility mTLS keystore.
+  private fun rawUtility(key: String): String? =
+    System.getenv(UTILITY_ENV_PREFIX + key)?.takeIf { it.isNotBlank() }
 
-  return file.readLines().mapNotNull { line ->
-    val trimmed = line.trim().removePrefix("export ").trim()
-    if (trimmed.isEmpty() || trimmed.startsWith("#")) return@mapNotNull null
-    val eq = trimmed.indexOf('=').takeIf { it > 0 } ?: return@mapNotNull null
-    val key = trimmed.substring(0, eq).trim()
-    val value = trimmed.substring(eq + 1).trim().trim('"', '\'')
-    key to value
-  }.toMap()
+  fun optionalUtility(key: String): String? = rawUtility(key)
+
+  fun requireUtility(key: String): String =
+    rawUtility(key)
+      ?: error(
+        "missing required config for '$utilityId': set $UTILITY_ENV_PREFIX$key via mise (mise.local.toml)",
+      )
 }

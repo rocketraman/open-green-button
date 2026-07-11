@@ -16,7 +16,6 @@ import org.opengb.proxy.TokenCrypto
 import org.opengb.proxy.UsageClient
 import org.opengb.utility.TokenAuthStyle
 import org.opengb.utility.UtilityProfile
-import java.io.File
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
@@ -36,15 +35,13 @@ import kotlin.time.Instant
  *
  *   ./gradlew :app:onboardFetchUsageDirect --args="<claimCode> [dateFilterParam]"
  *
- * Requires in the gitignored .env (both are Fly secrets — see README/notes for how to read them):
+ * Requires in mise.local.toml (all are Fly secrets — see README/notes for how to read them):
  *   OPENGB_CRYPTO_AESKEYBASE64                 — decrypts the refresh blob
+ *   OPENGB_UTILITY_MILTON_HYDRO_CLIENTID       — the CMD client id
  *   OPENGB_UTILITY_MILTON_HYDRO_CLIENTSECRET   — the CMD client secret, for the refresh grant
  */
 private const val PROXY_BASE = "https://api.opengreenbutton.org"
 private const val MILTON_TOKEN_URL = "https://sandboxdc.savagedata.com:4243/connect/token"
-
-// Public (in utilities.conf), not a secret — the milton_hydro OAuth client id from ApplicationInformation.
-private const val MILTON_CLIENT_ID = "12cc85f5-896d-4851-a359-d3698dbcf52b"
 
 // A throwaway HMAC pepper: TokenCrypto validates its length but decrypt() never uses it.
 private const val DUMMY_PEPPER_B64 = "AAAAAAAAAAAAAAAAAAAAAA=="
@@ -57,7 +54,7 @@ fun main(args: Array<String>) {
     args.getOrNull(0)?.takeIf { it.isNotBlank() }
       ?: error("usage: onboardFetchUsageDirect <claimCode> [dateFilterParam]")
   val dateFilterParam = args.getOrNull(1)?.takeIf { it.isNotBlank() }
-  val env = dotenv()
+  val env = System.getenv()
   val aesKey = env("OPENGB_CRYPTO_AESKEYBASE64", env)
   val clientSecret = env("OPENGB_UTILITY_MILTON_HYDRO_CLIENTSECRET", env)
 
@@ -68,7 +65,7 @@ fun main(args: Array<String>) {
       displayName = "Milton Hydro",
       authorizeUrl = "https://sandboxdc.savagedata.com:4243/connect/authorize",
       tokenUrl = MILTON_TOKEN_URL,
-      clientId = MILTON_CLIENT_ID,
+      clientId = env("OPENGB_UTILITY_MILTON_HYDRO_CLIENTID", env),
       clientSecret = Masked(clientSecret),
       tokenAuthStyle = TokenAuthStyle.HTTP_BASIC,
     )
@@ -145,18 +142,5 @@ private fun env(
   dotenv: Map<String, String>,
 ): String =
   (System.getenv(key)?.takeIf { it.isNotBlank() } ?: dotenv[key]?.takeIf { it.isNotBlank() })
-    ?: error("missing required config: set $key in the environment or .env")
+    ?: error("missing required config: set $key via mise (mise.local.toml)")
 
-/** Minimal .env loader: search the working dir and ancestors for the first `.env`. */
-private fun dotenv(): Map<String, String> {
-  val file =
-    generateSequence(File("").absoluteFile) { it.parentFile }
-      .map { File(it, ".env") }
-      .firstOrNull { it.isFile } ?: return emptyMap()
-  return file.readLines().mapNotNull { line ->
-    val t = line.trim().removePrefix("export ").trim()
-    if (t.isEmpty() || t.startsWith("#")) return@mapNotNull null
-    val eq = t.indexOf('=').takeIf { it > 0 } ?: return@mapNotNull null
-    t.substring(0, eq).trim() to t.substring(eq + 1).trim().trim('"', '\'')
-  }.toMap()
-}

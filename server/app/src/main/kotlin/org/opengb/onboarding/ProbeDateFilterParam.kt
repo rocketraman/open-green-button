@@ -39,7 +39,7 @@ import kotlin.time.Instant
  * SECRET HANDLING: this decrypts a real refresh token and mints a real access token for a live
  * account. Neither is ever printed — only a short, non-reversible fingerprint (see [mask]) — so
  * running this and sharing its console output does not leak usable credentials. Run it yourself,
- * in your own terminal, from your own `.env`; nothing here needs to be pasted anywhere.
+ * in your own terminal, from your own `mise.local.toml`; nothing here needs to be pasted anywhere.
  *
  * It reuses the production crypto + OAuth + fetch code paths:
  *   1. TokenCrypto.decrypt(blob)                        → the raw refresh token + subscriptionUri
@@ -54,8 +54,9 @@ import kotlin.time.Instant
  *
  *   ./gradlew :app:onboardProbeDateFilterParam --args="<encryptedRefreshBlob>"
  *
- * Requires in the gitignored .env (Fly secrets — see README/notes for how to read them):
+ * Requires in mise.local.toml (Fly secrets — see README/notes for how to read them):
  *   OPENGB_CRYPTO_AESKEYBASE64                    — decrypts the refresh blob
+ *   OPENGB_UTILITY_BURLINGTON_HYDRO_CLIENTID      — the OAuth client id
  *   OPENGB_UTILITY_BURLINGTON_HYDRO_CLIENTSECRET  — the OAuth client secret, for the refresh grant
  *
  * Optional, only if this deployment presents a client cert to Burlington (most don't):
@@ -66,9 +67,6 @@ import kotlin.time.Instant
  *   OPENGB_CLIENTAUTH_KEYPASSWORD                 — optional
  */
 private const val BURLINGTON_TOKEN_URL = "https://greenbutton.burlingtonhydro.com/oauth/token"
-
-// Public (in utilities.conf), not a secret.
-private const val BURLINGTON_CLIENT_ID = "opengreenbutton"
 private const val BURLINGTON_SCOPE =
   "FB=1_3_4_5_13_15_16_28_31_37_39_51_53_54_55_56_57_58_59_60_61_64_65_68_69"
 
@@ -81,7 +79,7 @@ fun main(args: Array<String>) {
   val encryptedBlob =
     args.getOrNull(0)?.takeIf { it.isNotBlank() }
       ?: error("usage: onboardProbeDateFilterParam <encryptedRefreshBlob>")
-  val env = dotenv()
+  val env = System.getenv()
   val aesKey = env("OPENGB_CRYPTO_AESKEYBASE64", env)
   val crypto = TokenCrypto(CryptoConfig(aesKeyBase64 = Masked(aesKey), hmacPepperBase64 = Masked(DUMMY_PEPPER_B64)))
   val utility = burlingtonProfile(env)
@@ -144,7 +142,7 @@ private fun burlingtonProfile(env: Map<String, String>): UtilityProfile =
     displayName = "Burlington Hydro",
     authorizeUrl = "https://greenbutton.burlingtonhydro.com/oauth/authorize",
     tokenUrl = BURLINGTON_TOKEN_URL,
-    clientId = BURLINGTON_CLIENT_ID,
+    clientId = env("OPENGB_UTILITY_BURLINGTON_HYDRO_CLIENTID", env),
     clientSecret = Masked(env("OPENGB_UTILITY_BURLINGTON_HYDRO_CLIENTSECRET", env)),
     defaultScope = BURLINGTON_SCOPE,
     tokenAuthStyle = TokenAuthStyle.HTTP_BASIC,
@@ -250,23 +248,9 @@ private fun env(
   dotenv: Map<String, String>,
 ): String =
   optionalEnv(key, dotenv)
-    ?: error("missing required config: set $key in the environment or .env")
+    ?: error("missing required config: set $key via mise (mise.local.toml)")
 
 private fun optionalEnv(
   key: String,
   dotenv: Map<String, String>,
 ): String? = System.getenv(key)?.takeIf { it.isNotBlank() } ?: dotenv[key]?.takeIf { it.isNotBlank() }
-
-/** Minimal .env loader: search the working dir and ancestors for the first `.env`. */
-private fun dotenv(): Map<String, String> {
-  val file =
-    generateSequence(File("").absoluteFile) { it.parentFile }
-      .map { File(it, ".env") }
-      .firstOrNull { it.isFile } ?: return emptyMap()
-  return file.readLines().mapNotNull { line ->
-    val t = line.trim().removePrefix("export ").trim()
-    if (t.isEmpty() || t.startsWith("#")) return@mapNotNull null
-    val eq = t.indexOf('=').takeIf { it > 0 } ?: return@mapNotNull null
-    t.substring(0, eq).trim() to t.substring(eq + 1).trim().trim('"', '\'')
-  }.toMap()
-}

@@ -3,8 +3,8 @@
 # raw responses/headers and confirm the client certificate is accepted.
 #
 # It does a client_credentials grant (the registration flow) and then GETs a resource, printing
-# the full status + headers + body. Reads the gitignored .env at the repo root for the leaf-cert
-# keystore + registration creds.
+# the full status + headers + body. Reads the leaf-cert keystore + registration creds from mise
+# (mise.local.toml [env]); no .env needed.
 #
 #   scripts/diag/direct_savagedata.sh                 # GET ApplicationInformation (default)
 #   scripts/diag/direct_savagedata.sh '<resource_url>'  # GET any resource URL
@@ -19,13 +19,16 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-set -a; . "$ROOT/.env"; set +a
+# Pull OPENGB_* from mise's [env] (mise.local.toml). Works whether or not the shell has mise
+# activated, as long as `mise` is on PATH and the repo is trusted (`mise trust`).
+set -a; eval "$(cd "$ROOT" && mise env)"; set +a
 
-P=OPENGB_ONBOARD_MILTON_HYDRO
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
-printf '%s' "$OPENGB_ONBOARD_MILTON_HYDRO_CLIENTAUTH_KEYSTORE_BASE64" | base64 -d > "$TMP/leaf.p12"
-PASS="$OPENGB_ONBOARD_MILTON_HYDRO_CLIENTAUTH_KEYSTORE_PASSWORD"
+# The mTLS leaf cert is the shared runtime credential (same key the server reads), not an
+# onboarding-specific copy.
+printf '%s' "$OPENGB_UTILITY_MILTON_HYDRO_CLIENTAUTH_KEYSTOREBASE64" | base64 -d > "$TMP/leaf.p12"
+PASS="$OPENGB_UTILITY_MILTON_HYDRO_CLIENTAUTH_KEYSTOREPASSWORD"
 # p12 -> PEM (avoids curl's `cert:password` colon-splitting on odd passwords)
 openssl pkcs12 -in "$TMP/leaf.p12" -clcerts -nokeys  -passin "pass:$PASS" -out "$TMP/cert.pem" 2>/dev/null
 openssl pkcs12 -in "$TMP/leaf.p12" -nocerts -nodes    -passin "pass:$PASS" -out "$TMP/key.pem"  2>/dev/null
