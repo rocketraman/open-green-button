@@ -37,7 +37,7 @@ That is the purpose this document.
    If that doesn't work, try `ogb-client-bundle.crt`.
    If that doesn't work, contact me.
 
-1. Create a utility documentation page at https://github.com/rocketraman/open-green-button/docs (example https://github.com/rocketraman/open-green-button/docs/milton-hydro.md).
+1. Create a utility documentation page at https://github.com/rocketraman/open-green-button/tree/master/docs/utilities (example https://github.com/rocketraman/open-green-button/blob/master/docs/utilities/milton-hydro.md).
 Note yourself as the "Information on File" for the utility.
 This is so the community knows whose information each utility has on record.
 Also note in here if a client certificate was required for mTLS, and if so, which one.
@@ -45,6 +45,7 @@ If no client certificate was required, note "Not checked by utility."
 
 1. Please share any secrets, such as client id and client password by sending them to [rocketraman@gmail.com](mailto:rocketraman@gmail.com).
 I will upload the credentials into the running proxy on Fly.io as secrets.
+In addition, if there are any credentials for portal or dashboard access, please share those as well.
 
 1. After that we follow the utility registration process.
 This will generally require setting up a test account against a sandbox system, having the utility validate it, and then the utility will move us to production, providing us with the necessary URLs and credentials.
