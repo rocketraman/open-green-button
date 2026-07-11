@@ -122,11 +122,25 @@ val ProxyUsageTest by testSuite {
     }
   }
 
-  test("401 utility_auth_expired when the utility rejects the refresh token") {
-    runProxyUsage(tokenEndpointStatus = HttpStatusCode.Unauthorized) { client, ctx ->
+  test("400 invalid_grant → utility_auth_expired when the utility rejects the refresh token") {
+    // A token-endpoint 400 is `invalid_grant` (RFC 6749 §5.2): the resource owner's grant is
+    // expired/revoked → the user must re-authorize.
+    runProxyUsage(tokenEndpointStatus = HttpStatusCode.BadRequest) { client, ctx ->
       val resp = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob)
       assert(resp.status == HttpStatusCode.Unauthorized) { resp.bodyAsText() }
       assert(resp.bodyAsText().contains("utility_auth_expired"))
+    }
+  }
+
+  test("401 invalid_client → utility_client_auth_failed (server misconfig, NOT user reauth)") {
+    // A token-endpoint 401 is `invalid_client`: OUR clientId/clientSecret failed, not the user's
+    // grant. It must NOT map to utility_auth_expired (which drives the HA reauth flow) — that would
+    // spam every user with a dead-end reauth for a problem only an operator can fix.
+    runProxyUsage(tokenEndpointStatus = HttpStatusCode.Unauthorized) { client, ctx ->
+      val resp = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob)
+      assert(resp.status == HttpStatusCode.BadGateway) { resp.bodyAsText() }
+      assert(resp.bodyAsText().contains("utility_client_auth_failed")) { resp.bodyAsText() }
+      assert(!resp.bodyAsText().contains("utility_auth_expired")) { resp.bodyAsText() }
     }
   }
 

@@ -285,13 +285,34 @@ private suspend fun ApplicationCall.refreshAccessToken(
     connectLog.warn(
       "Refresh failed for utility=${utility.id} scopeSent=${scope ?: "(omitted)"}: ${e.message}",
     )
-    // 4xx on the token endpoint = utility rejected our refresh token (expired, revoked,
-    // scope changed). HA should observe `utility_auth_expired` and trigger the reauth flow.
-    // 5xx or no status = upstream transient — HA should retry, not reauth.
-    val authRejected = e.statusCode in AUTH_REJECTED_STATUSES
-    val status = if (authRejected) HttpStatusCode.Unauthorized else HttpStatusCode.BadGateway
-    val errorKey = if (authRejected) "utility_auth_expired" else "utility_upstream_error"
-    respondError(status, errorKey, e.message)
+    // Distinguish WHOSE credential the token endpoint rejected (RFC 6749 §5.2 maps token-endpoint
+    // failures to distinct HTTP statuses), because they need opposite responses:
+    //
+    //   401 invalid_client — OUR clientId/clientSecret failed to authenticate. A token endpoint
+    //     returns 401 *specifically* for client-auth failure; an expired/revoked refresh token is
+    //     `invalid_grant` → 400, never 401. No user action can fix this — it strands every account
+    //     on the utility — so it must NOT drive an HA reauth. Surface a distinct server-side error
+    //     and log loudly for the operator; HA treats the non-`utility_auth_expired` response as a
+    //     transient failure and retries, so it self-heals once the misconfigured secret is fixed.
+    //
+    //   400 invalid_grant / 403 access_denied — the resource owner's grant is gone (expired,
+    //     revoked, or scope changed). HA should observe `utility_auth_expired` and reauth.
+    //
+    //   5xx or no status — upstream transient; HA should retry, not reauth.
+    when {
+      e.statusCode == HTTP_UNAUTHORIZED -> {
+        connectLog.error(
+          "Client authentication REJECTED by utility=${utility.id} token endpoint (HTTP 401 " +
+            "invalid_client). This is a SERVER-SIDE misconfiguration — verify the configured " +
+            "clientId/clientSecret for this utility — not a user reauth condition.",
+        )
+        respondError(HttpStatusCode.BadGateway, "utility_client_auth_failed", e.message)
+      }
+      e.statusCode in GRANT_REJECTED_STATUSES ->
+        respondError(HttpStatusCode.Unauthorized, "utility_auth_expired", e.message)
+      else ->
+        respondError(HttpStatusCode.BadGateway, "utility_upstream_error", e.message)
+    }
     null
   }
 
@@ -411,10 +432,16 @@ private suspend fun ApplicationCall.respondError(
   message: String? = null,
 ) = respond(status, ErrorBody(error = error, message = message))
 
-// HTTP status codes from the utility token endpoint that mean "your refresh token is no
-// good." RFC 6749 §5.2 maps these to invalid_grant/invalid_client/access_denied.
+// Token-endpoint statuses that mean "the resource owner's GRANT is no good" (expired, revoked, or
+// scope mismatch) → the user must re-authorize. RFC 6749 §5.2 maps these to invalid_grant (400) and
+// access_denied (403). 401 is deliberately EXCLUDED: a 401 from the token endpoint is
+// `invalid_client` — OUR client credentials failed — a server-side problem no reauth can fix. It is
+// handled separately in [refreshAccessToken].
 @Suppress("MagicNumber")
-private val AUTH_REJECTED_STATUSES = setOf(400, 401, 403)
+private val GRANT_REJECTED_STATUSES = setOf(400, 403)
+
+@Suppress("MagicNumber")
+private const val HTTP_UNAUTHORIZED = 401
 
 private val ESPI_ATOM_XML = ContentType("application", "atom+xml")
 private const val MAX_UPSTREAM_ERROR_SNIPPET = 500
