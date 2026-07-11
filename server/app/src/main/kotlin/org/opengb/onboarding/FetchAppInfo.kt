@@ -151,8 +151,7 @@ private class OnboardingEnv(
   val utilityId: String,
 ) {
   // mise injects mise.local.toml [env] into the process environment; read it directly.
-  private fun raw(key: String): String? =
-    System.getenv(ENV_PREFIX + key)?.takeIf { it.isNotBlank() }
+  private fun raw(key: String): String? = System.getenv(ENV_PREFIX + key)?.takeIf { it.isNotBlank() }
 
   fun optional(key: String): String? = raw(key)
 
@@ -164,8 +163,7 @@ private class OnboardingEnv(
 
   // Same, but for the runtime OPENGB_UTILITY_ namespace (config the running server also reads) — used
   // for credentials shared between registration and runtime, e.g. the per-utility mTLS keystore.
-  private fun rawUtility(key: String): String? =
-    System.getenv(UTILITY_ENV_PREFIX + key)?.takeIf { it.isNotBlank() }
+  private fun rawUtility(key: String): String? = System.getenv(UTILITY_ENV_PREFIX + key)?.takeIf { it.isNotBlank() }
 
   fun optionalUtility(key: String): String? = rawUtility(key)
 
