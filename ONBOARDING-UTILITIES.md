@@ -37,9 +37,9 @@ That is the purpose this document.
 
    | Form Field | URI                                                                                                         |
    | ------------- |----------------------------------------------------------------------------------------------------------|
-   | Redirect URI | https://api.opengreenbutton.org/connect/<utility_slug>/callback                                           |
-   | Notification URI | https://api.opengreenbutton.org/notify/<utility_slug>                                                 |
-   | Logo URI | https://raw.githubusercontent.com/rocketraman/open-green-button/refs/heads/master/branding/logo-horizontal.svg|
+   | Redirect URI | `https://api.opengreenbutton.org/connect/<utility_slug>/callback`                                           |
+   | Notification URI | `https://api.opengreenbutton.org/notify/<utility_slug>`                                                 |
+   | Logo URI | `https://raw.githubusercontent.com/rocketraman/open-green-button/refs/heads/master/branding/logo-horizontal.svg`|
 
    If you are asked for an SSL certificate, first try `ogb-ca.crt` from the `certs/` directory.
    If that doesn't work, try `ogb-client.crt`.
