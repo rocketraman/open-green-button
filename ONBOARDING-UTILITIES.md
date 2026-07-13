@@ -1,4 +1,4 @@
-**# Onboarding a New Utility**
+# **Onboarding a New Utility**
 
 ## Understanding
 
