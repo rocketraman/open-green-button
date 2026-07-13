@@ -61,8 +61,8 @@ fun main(args: Array<String>) {
   // per-utility clientAuth block) rather than a parallel OPENGB_ONBOARD_ copy.
   val clientAuth =
     ClientAuthConfig(
-      keystoreBase64 = Masked(env.requireUtility("${id}_CLIENTAUTH_KEYSTOREBASE64")),
-      keystorePassword = Masked(env.requireUtility("${id}_CLIENTAUTH_KEYSTOREPASSWORD")),
+      keystoreBase64 = env.optionalUtility("${id}_CLIENTAUTH_KEYSTOREBASE64")?.let {Masked(it) },
+      keystorePassword = env.optionalUtility("${id}_CLIENTAUTH_KEYSTOREPASSWORD")?.let { Masked(it) },
       keystoreType = env.optionalUtility("${id}_CLIENTAUTH_KEYSTORETYPE") ?: "PKCS12",
       keyAlias = env.optionalUtility("${id}_CLIENTAUTH_KEYALIAS"),
       keyPassword = env.optionalUtility("${id}_CLIENTAUTH_KEYPASSWORD")?.let { Masked(it) },

@@ -10,4 +10,5 @@ Registration created by Amoldeep Saini (@amol234545) using his own contact infor
 See https://github.com/rocketraman/open-green-button/issues/7.
 
 ## mTLS Status
-N/A (not registered yet)
+
+Not checked by utility.

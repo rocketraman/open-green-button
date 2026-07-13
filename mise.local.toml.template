@@ -34,7 +34,7 @@ OPENGB_UTILITY_KENTUCKY_UTILITIES_CLIENTSECRET = ""
 # ── Green Button Test Lab (London Hydro cert harness) ─────────────────────────────────────────
 OPENGB_UTILITY_GREENBUTTON_TEST_LAB_CLIENTSECRET = ""
 
-# ── Milton Hydro (savagedata sandbox DC) ──────────────────────────────────────────────────────
+# ── Milton Hydro (savagedata sandbox DC) (example) ────────────────────────────────────────────
 # Runtime (server) secrets — consumed via utilities.conf ${?…} substitution.
 OPENGB_UTILITY_MILTON_HYDRO_CLIENTID = ""
 OPENGB_UTILITY_MILTON_HYDRO_CLIENTSECRET = ""
@@ -43,7 +43,7 @@ OPENGB_UTILITY_MILTON_HYDRO_CLIENTAUTH_KEYSTOREPASSWORD = ""
 #
 # Onboarding-driver registration inputs — consumed by `:app:onboardFetchAppInfo` and
 # scripts/diag/direct_savagedata.sh (plain env; the bash script can't parse HOCON). TOKEN_URL mirrors
-# the milton_hydro block in utilities.conf (that block is the source of truth, repeated here only
+# the utility block in utilities.conf (that block is the source of truth, repeated here only
 # because the operator drivers take it as env). APP_INFO_URL comes from the onboarding notification
 # (log field notify.resources); REG_SCOPE is what savagedata registered.
 # Everything shared with the running server — the client id/secret and the mTLS keystore — is read
