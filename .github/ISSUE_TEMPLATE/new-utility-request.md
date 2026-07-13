@@ -18,5 +18,5 @@ Provide information about the utility here:
 
 # Contribution Support
 
-- [x] Are you willing to work with the utility to register this integration?
+- [x] Are you willing to work with the utility to register this integration? If yes, read the [Onboarding Instructions](https://github.com/rocketraman/open-green-button/blob/master/ONBOARDING-UTILITIES.md)!
 - [x] Are you willing to test integrations with this utility?
