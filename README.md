@@ -6,9 +6,9 @@ The hosted server is a **stateless OAuth proxy**: utilities require a stable pub
 
 ## Status
 
-* 🚧 **Live!** Burlington Hydro (Ontario, Canada).
-* 🚧 **Live!** Consumers Energy (Michigan, USA), thank you Michael Phillippi ([@philliml74](https://github.com/philliml74)).
-* 🚧 **Live!** Kentucky Utilities (Kentucky, USA), thank you Tag Howard ([@jthoward64](https://github.com/jthoward64)).
+* ✅ **Live!** Burlington Hydro (Ontario, Canada).
+* ✅ **Live!** Consumers Energy (Michigan, USA), thank you Michael Phillippi ([@philliml74](https://github.com/philliml74)).
+* ✅ **Live!** Kentucky Utilities (Kentucky, USA), thank you Tag Howard ([@jthoward64](https://github.com/jthoward64)).
 * 🚧 **Registration in progress** Alectra (Ontario, Canada).
 * 🚧 **Registration in progress** Elexicon Energy (Ontario, Canada), thank you Muhammad Aziz ([@rabbitholelabsinc](https://github.com/rabbitholelabsinc)).
 * 🚧 **Registration in progress** Elk Energy (Ontario, Canada).
