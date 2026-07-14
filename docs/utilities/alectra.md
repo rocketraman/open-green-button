@@ -11,4 +11,4 @@ See https://github.com/rocketraman/open-green-button/issues/7.
 
 ## mTLS Status
 
-Not checked by utility.
+Verified via self-signed CA certificate.

@@ -2,7 +2,7 @@
 
 ## Provider
 
-Green Button services for Milton Hydro are provided by London Hydro.
+Green Button services for Milton Hydro are provided by Savage Data.
 
 ## Information on File
 
@@ -11,4 +11,4 @@ See https://github.com/rocketraman/open-green-button/issues/6.
 
 ## mTLS Status
 
-Not checked by utility.
+Verified via self-signed CA certificate.
