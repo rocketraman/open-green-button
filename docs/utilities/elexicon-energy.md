@@ -2,7 +2,7 @@
 
 ## Provider
 
-Green Button services are provided directly by Elexicon Energy.
+Green Button services for Elexicon Energy are provided by Savage Data.
 
 ## Information on File
 
