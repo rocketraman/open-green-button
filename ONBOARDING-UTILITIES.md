@@ -28,6 +28,10 @@ That is the purpose this document.
 
    > An open source integration of Green Button data into your local Home Assistant instance. Creates the necessary statistics in Home Assistant that allow you to track energy usage and cost on the Home Assistant Energy Dashboard and to define home automations and alerts based on energy usage.
 
+   If you are asked for a **scope of use**, use:
+
+   > Customer energy usage and cost / billing information is made available to the customer for use within their own on-premises analysis software. We also obtain customer account information for display within the same software, so that customer can visually associate their account with the integration.
+
    If you are asked for **title / subtitle**, use "Open Green Button Home Assistant Integration".
 
    If you are asked for **logos**, you can use the logos from here: https://github.com/rocketraman/open-green-button/tree/master/branding (see the `web` directory for PNGs).
@@ -35,16 +39,28 @@ That is the purpose this document.
    If you are asked for URIs, create a lower-case path slug for the utility e.g. `burlington_hydro` for Burlington Hydro.
    See the following table, replace `<utility_slug>` with the slug you created:
 
-   | Form Field | URI                                                                                                         |
-   | ------------- |----------------------------------------------------------------------------------------------------------|
+   | Form Field | URI                                                                                                           |
+   | ------------- |------------------------------------------------------------------------------------------------------------|
+   | Application URI | `https://opengreenbutton.org`                                                                            |
    | Redirect URI | `https://api.opengreenbutton.org/connect/<utility_slug>/callback`                                           |
    | Notification URI | `https://api.opengreenbutton.org/notify/<utility_slug>`                                                 |
    | Logo URI | `https://raw.githubusercontent.com/rocketraman/open-green-button/refs/heads/master/branding/logo-horizontal.svg`|
 
-   If you are asked for an SSL certificate, first try `ogb-ca.crt` from the `certs/` directory.
+   If you are asked for an **SSL certificate**, first try `ogb-ca.crt` from the `certs/` directory.
    If that doesn't work, try `ogb-client.crt`.
    If that doesn't work, try `ogb-client-bundle.crt`.
    If that doesn't work, contact me.
+
+   If you are asked for **Scope Information**, choose:
+   * Usage information (4)
+     * Interval electricity (5)
+     * Demand electricity (6)
+     * Forward or reverse metering (8)
+     * Cost (12)
+   * Billing infomration (15, 16, 17, 27, 28) -- might not be needed but can't hurt
+   * Custoemr information (51, 54, 55, 56, 57, 58, 59, 60, 61) -- for displaying account info on the HA add-on page
+
+   If you are asked for the **information sharing period**, choose "Daily".
 
 1. Create a utility documentation page at https://github.com/rocketraman/open-green-button/tree/master/docs/utilities (example https://github.com/rocketraman/open-green-button/blob/master/docs/utilities/milton-hydro.md).
 Note yourself as the "Information on File" for the utility.
