@@ -14,6 +14,7 @@ The hosted server is a **stateless OAuth proxy**: utilities require a stable pub
 * 🚧 **Registration in progress** Elk Energy (Ontario, Canada).
 * 🚧 **Registration in progress** Enwin (Ontario, Canada).
 * 🚧 **Registration in progress** Festival Hydro (Ontario, Canada).
+* 🚧 **Registration in progress** Hydro Ottawa (Ontario, Canada), thank you Mike Wrightly ([@mikewrightly](https://github.com/mikewrightly)).
 * 🚧 **Registration in progress** London Hydro (Ontario, Canada).
 * 🚧 **Registration in progress** Milton Hydro (Ontario, Canada), thank you Jeff Aycan ([@JAudi23](https://github.com/JAudi23)).
 * 🚧 **Registration in progress** Newmarket-Tay (NT) Power (Ontario, Canada).
