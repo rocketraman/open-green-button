@@ -1,4 +1,4 @@
-# Elexicon Energy (Ontario, Canada)
+# Elexicon Energy (Ontario, Canada) - Registration in Progress
 
 ## Provider
 
@@ -11,3 +11,5 @@ Registration created by [Muhammad Aziz (@rabbitholelabsinc)](https://github.com/
 ## mTLS Status
 
 Not checked by utility.
+
+
