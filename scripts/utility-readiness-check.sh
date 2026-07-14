@@ -29,6 +29,36 @@ HOST="${BASE_URL#https://}"
 HOST="${HOST#http://}"
 HOST="${HOST%%/*}"
 
+# Resolve the NotificationURI path the utility will POST to. The path is per-utility config
+# (UtilityProfile.notificationPath), defaulting server-side to /notify/<id>. Almost every profile
+# inherits that default and so sets nothing; a custodian that mandates a non-default callback path
+# overrides it in utilities.conf. Read the override from the conf when present so this check probes
+# the *registered* path rather than assuming the convention; otherwise fall back to the same
+# /notify/<id> default the server derives. If the conf isn't reachable (e.g. run standalone against
+# a hosted URL), the default still applies.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONF="$SCRIPT_DIR/../server/app/src/main/resources/utilities.conf"
+NOTIFY_PATH=""
+if [ -f "$CONF" ]; then
+    # Track the most recent uncommented `id = "..."` and, within that same block, capture an
+    # explicit `notificationPath = "..."`. POSIX awk (no gawk match-capture extension).
+    NOTIFY_PATH=$(awk -v util="$UTILITY" '
+        /^[ \t]*#/ { next }
+        /^[ \t]*id[ \t]*=[ \t]*"/ {
+            s=$0; sub(/^[ \t]*id[ \t]*=[ \t]*"/, "", s); sub(/".*/, "", s); cur=s; next
+        }
+        /^[ \t]*notificationPath[ \t]*=[ \t]*"/ {
+            if (cur==util) {
+                s=$0; sub(/^[ \t]*notificationPath[ \t]*=[ \t]*"/, "", s); sub(/".*/, "", s)
+                print s; exit
+            }
+        }
+    ' "$CONF")
+fi
+[ -n "$NOTIFY_PATH" ] || NOTIFY_PATH="/notify/$UTILITY"
+# Guard against a config value written without a leading slash.
+case "$NOTIFY_PATH" in /*) ;; *) NOTIFY_PATH="/$NOTIFY_PATH" ;; esac
+
 if [ -t 1 ]; then
     GREEN=$'\033[0;32m'; RED=$'\033[0;31m'; YELLOW=$'\033[1;33m'; BOLD=$'\033[1m'; NC=$'\033[0m'
 else
@@ -55,6 +85,7 @@ status() {
 printf '%sOpen Green Button — utility readiness check%s\n' "$BOLD" "$NC"
 printf '  Base URL: %s\n' "$BASE_URL"
 printf '  Utility:  %s\n' "$UTILITY"
+printf '  Notify:   %s\n' "$NOTIFY_PATH"
 printf '  (first request may take 5-15s if Fly machine is stopped)\n'
 
 # DNS + TLS only matter against a real public URL; skip when caller is exercising a local
@@ -209,18 +240,18 @@ section "NotificationURI"
 # ------------------------------------------------------------------
 s=$(status -X POST -H 'Content-Type: application/atom+xml' \
        --data-binary '<?xml version="1.0"?><feed/>' \
-       "$BASE_URL/notify/$UTILITY")
+       "$BASE_URL$NOTIFY_PATH")
 if [[ "$s" =~ ^2 ]]; then
-    pass "POST /notify/$UTILITY returns $s"
+    pass "POST $NOTIFY_PATH returns $s"
 else
-    fail "POST /notify/$UTILITY returned $s (expected 2xx)"
+    fail "POST $NOTIFY_PATH returned $s (expected 2xx)"
 fi
 # GET should not be 200 — notify is POST-only
-s=$(status "$BASE_URL/notify/$UTILITY")
+s=$(status "$BASE_URL$NOTIFY_PATH")
 case "$s" in
-    404|405|400) pass "GET /notify/$UTILITY returns $s (POST-only as designed)" ;;
-    200) fail "GET /notify/$UTILITY returns 200 — endpoint should reject GET" ;;
-    *) warn "GET /notify/$UTILITY returns $s (would expect 404 or 405)" ;;
+    404|405|400) pass "GET $NOTIFY_PATH returns $s (POST-only as designed)" ;;
+    200) fail "GET $NOTIFY_PATH returns 200 — endpoint should reject GET" ;;
+    *) warn "GET $NOTIFY_PATH returns $s (would expect 404 or 405)" ;;
 esac
 
 # ------------------------------------------------------------------
