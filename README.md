@@ -21,7 +21,6 @@ The hosted server is a **stateless OAuth proxy**: utilities require a stable pub
 * 🚧 **Registration in progress** Oakville Hydro (Ontario, Canada).
 * 🚧 **Registration in progress** Oshawa Power (Ontario, Canada).
 * 🚧 **Registration in progress** Pacific Gas & Electric (California).
-* 🚧 **Registration in progress** Elexicon Energy (Ontario, Canada).
 
 ### New Utility Support
 
