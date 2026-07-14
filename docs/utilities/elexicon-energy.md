@@ -1,4 +1,4 @@
-# Elexicon Energy (Ontario, Canada) - Registration in Progress
+# Elexicon Energy (Ontario, Canada)
 
 ## Provider
 
