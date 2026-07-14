@@ -7,6 +7,7 @@ The hosted server is a **stateless OAuth proxy**: utilities require a stable pub
 ## Status
 
 * 🚧 **Live!** Burlington Hydro (Ontario, Canada).
+* 🚧 **Live!** Consumers Energy (Michigan, USA).
 * 🚧 **Live!** Kentucky Utilities (Kentucky, USA). thank you Jeff Aycan (@JAudi23).
 * 🚧 **Registration in progress** Alectra (Ontario, Canada).
 * 🚧 **Registration in progress** Elk Energy (Ontario, Canada).
