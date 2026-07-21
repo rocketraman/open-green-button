@@ -52,6 +52,17 @@ data class UtilityProfile(
    * effective control.
    */
   val initialHistory: String = "2y",
+  /**
+   * How often the Home Assistant client polls `/proxy/usage` for freshly-published data, as a
+   * human-friendly window (`1d`, `12h`, `6h`). Surfaced to the client in the claim response (as
+   * seconds); it drives the coordinator's `update_interval`.
+   *
+   * Per-utility because publish cadence and how aggressively a custodian tolerates polling vary.
+   * Default `1d` — utilities publish interval data on a multi-hour-to-multi-day lag, so a daily
+   * poll captures everything without hammering the resource server. The client falls back to its
+   * own default only when an entry predates this field.
+   */
+  val pollInterval: String = "1d",
   /** Where the utility POSTs notifications. The proxy registers this URL at app submission time. */
   val notificationPath: String = "/notify/$id",
   val tokenAuthStyle: TokenAuthStyle = TokenAuthStyle.HTTP_BASIC,
@@ -67,6 +78,10 @@ data class UtilityProfile(
   /** [initialHistory] parsed to seconds. Throws if the configured spec is malformed. */
   val initialHistorySeconds: Long
     get() = parseHistoryWindowSeconds(initialHistory)
+
+  /** [pollInterval] parsed to seconds. Throws if the configured spec is malformed. */
+  val pollIntervalSeconds: Long
+    get() = parseHistoryWindowSeconds(pollInterval)
 }
 
 enum class TokenAuthStyle {

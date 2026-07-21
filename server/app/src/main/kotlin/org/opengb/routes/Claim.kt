@@ -46,6 +46,7 @@ fun Application.installClaim(
           subscriptionUri = record.subscriptionUri,
           scope = record.scope,
           initialHistorySeconds = registry.require(record.utilityId).initialHistorySeconds,
+          pollIntervalSeconds = registry.require(record.utilityId).pollIntervalSeconds,
           currentApiVersion = currentApiVersion,
         ),
       )
@@ -62,6 +63,8 @@ data class ClaimResponse(
   val scope: String? = null,
   /** Seconds of history the client should backfill on first fetch; from the utility profile. */
   val initialHistorySeconds: Long,
+  /** Seconds between routine incremental polls; drives the client's `update_interval`. */
+  val pollIntervalSeconds: Long,
   val currentApiVersion: String,
 )
 
