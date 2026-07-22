@@ -6,21 +6,21 @@ The hosted server is a **stateless OAuth proxy**: utilities require a stable pub
 
 ## Status
 
+* ✅ **Live!** Alectra (Ontario, Canada).
 * ✅ **Live!** Burlington Hydro (Ontario, Canada).
 * ✅ **Live!** Consumers Energy (Michigan, USA), thank you Michael Phillippi ([@philliml74](https://github.com/philliml74)).
+* ✅ **Live!** Elexicon Energy (Ontario, Canada), thank you Muhammad Aziz ([@rabbitholelabsinc](https://github.com/rabbitholelabsinc)).
 * ✅ **Live!** Elk Energy (Ontario, Canada).
 * ✅ **Live!** Enwin (Ontario, Canada).
 * ✅ **Live!** Festival Hydro (Ontario, Canada).
+* ✅ **Live!** Hydro Ottawa (Ontario, Canada), thank you Mike Wrightly ([@mikewrightly](https://github.com/mikewrightly)).
 * ✅ **Live!** Kentucky Utilities (Kentucky, USA), thank you Tag Howard ([@jthoward64](https://github.com/jthoward64)).
 * ✅ **Live!** London Hydro (Ontario, Canada).
+* ✅ **Live!** Milton Hydro (Ontario, Canada), thank you Jeff Aycan ([@JAudi23](https://github.com/JAudi23)).
 * ✅ **Live!** Newmarket-Tay (NT) Power (Ontario, Canada).
 * ✅ **Live!** Niagara Peninsula Energy (Ontario, Canada).
 * ✅ **Live!** Oakville Hydro (Ontario, Canada).
 * ✅ **Live!** Oshawa Power (Ontario, Canada).
-* 🚧 **Registration in progress** Alectra (Ontario, Canada).
-* 🚧 **Registration in progress** Elexicon Energy (Ontario, Canada), thank you Muhammad Aziz ([@rabbitholelabsinc](https://github.com/rabbitholelabsinc)).
-* 🚧 **Registration in progress** Hydro Ottawa (Ontario, Canada), thank you Mike Wrightly ([@mikewrightly](https://github.com/mikewrightly)).
-* 🚧 **Registration in progress** Milton Hydro (Ontario, Canada), thank you Jeff Aycan ([@JAudi23](https://github.com/JAudi23)).
 * 🚧 **Registration in progress** Pacific Gas & Electric (California).
 
 ### New Utility Support
