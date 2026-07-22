@@ -21,8 +21,12 @@ That is the purpose this document.
 1. Find the Green Button third-party registration form on the utility site.
 
    Use **Open Green Button** as the **business name**.
+   Some forms split this into a **client name** (the OAuth client) and a **third-party name** (what the customer sees when authorizing) — use **Open Green Button** for both.
 
    Use **opengreenbutton@googlegroups.com** as the **email address**.
+
+   If you are asked for a **phone number**, use your own.
+   Note it on the utility documentation page (see below) alongside the rest of the "Information on File".
 
    If you are asked for a **description / summary**, use:
 
@@ -41,10 +45,30 @@ That is the purpose this document.
 
    | Form Field | URI                                                                                                           |
    | ------------- |------------------------------------------------------------------------------------------------------------|
-   | Application URI | `https://opengreenbutton.org`                                                                            |
+   | Application URI (a.k.a. Client URI) | `https://opengreenbutton.org`                                                          |
    | Redirect URI | `https://api.opengreenbutton.org/connect/<utility_slug>/callback`                                           |
-   | Notification URI | `https://api.opengreenbutton.org/notify/<utility_slug>`                                                 |
+   | Notification URI (a.k.a. Third-Party Notify URI) | `https://api.opengreenbutton.org/notify/<utility_slug>`                 |
+   | User Portal Screen URI | `https://api.opengreenbutton.org/connect/<utility_slug>/scope`                                    |
+   | Policy URI | `https://opengreenbutton.org/#privacy`                                                                        |
    | Logo URI | `https://raw.githubusercontent.com/rocketraman/open-green-button/refs/heads/master/branding/logo-horizontal.svg`|
+
+   Use the same slug in every one of those URIs.
+   If the form mentions pixel dimensions for the logo, give it the PNG instead: `https://raw.githubusercontent.com/rocketraman/open-green-button/refs/heads/master/branding/web/logo-horizontal.png`.
+
+   Some forms — generally the ESPI 3.x ones — ask for the OAuth client registration details as well:
+
+   | Form Field | Value |
+   | ------------- | ------------- |
+   | Software ID | `4c47b008-1e67-4f01-9731-e4e7008092d6` |
+   | Software Version | `1.0` |
+   | Third-Party Application Status | `Production` |
+   | Third-Party Application Type | `Web` |
+   | Third-Party Application Use | `Energy management` |
+   | Token Endpoint Authentication Method | `client_secret_basic` |
+   | Grant Types | `authorization_code, refresh_token, client_credentials` |
+   | Response Types | `code` |
+
+   The Software ID identifies the software rather than any one registration, so use that same UUID for every utility — do not generate a new one.
 
    If you are asked for an **SSL certificate**, first try `ogb-ca.crt` from the `certs/` directory.
    If that doesn't work, try `ogb-client.crt`.
@@ -60,7 +84,19 @@ That is the purpose this document.
    * Billing infomration (15, 16, 17, 27, 28) -- might not be needed but can't hurt
    * Custoemr information (51, 54, 55, 56, 57, 58, 59, 60, 61) -- for displaying account info on the HA add-on page
 
-   If you are asked for the **information sharing period**, choose "Daily".
+   Some utilities also require Common (1) and Connect My Data (3), so include those if they are offered.
+
+   Instead of checkboxes, some forms ask for the **scope** as a raw ESPI scope string.
+   Note that an ESPI scope string contains no spaces — everything is packed into `;`-separated `Key=Value` pairs, with `_` separating values within a pair — so it is a single value even where the form says "space-separated list".
+   Build it from the function blocks above plus whatever format parameters the utility says it supports, e.g.:
+
+   > `FB=1_3_4_5_12_15_16_17_27_28_51_54_55_56_57_58_59_60_61;IntervalDuration=900_3600;BlockDuration=Monthly;HistoryLength=94608000;SubscriptionFrequency=Daily`
+
+   `HistoryLength` is in seconds (94608000 is 36 months).
+   If the utility rejects the string, drop the format parameters and retry with just the `FB=` list — some sandboxes accept only that.
+   See the comments at the top of [`utilities.conf`](https://github.com/rocketraman/open-green-button/blob/master/server/app/src/main/resources/utilities.conf) for what each format parameter does.
+
+   If you are asked for the **information sharing period**, choose "Daily" (this is the same thing as `SubscriptionFrequency=Daily` above).
 
 1. Create a utility documentation page at https://github.com/rocketraman/open-green-button/tree/master/docs/utilities (example https://github.com/rocketraman/open-green-button/blob/master/docs/utilities/milton-hydro.md).
 Note yourself as the "Information on File" for the utility.
