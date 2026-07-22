@@ -41,7 +41,7 @@ import kotlin.time.Instant
  *   OPENGB_UTILITY_MILTON_HYDRO_CLIENTSECRET   — the CMD client secret, for the refresh grant
  */
 private const val PROXY_BASE = "https://api.opengreenbutton.org"
-private const val MILTON_TOKEN_URL = "https://sandboxdc.savagedata.com:4243/connect/token"
+private const val MILTON_TOKEN_URL = "https://miltondc.savagedata.com/connect/token"
 
 // A throwaway HMAC pepper: TokenCrypto validates its length but decrypt() never uses it.
 private const val DUMMY_PEPPER_B64 = "AAAAAAAAAAAAAAAAAAAAAA=="
@@ -63,7 +63,7 @@ fun main(args: Array<String>) {
     UtilityProfile(
       id = "milton_hydro",
       displayName = "Milton Hydro",
-      authorizeUrl = "https://sandboxdc.savagedata.com:4243/connect/authorize",
+      authorizeUrl = "https://miltondc.savagedata.com/connect/authorize",
       tokenUrl = MILTON_TOKEN_URL,
       clientId = env("OPENGB_UTILITY_MILTON_HYDRO_CLIENTID", env),
       clientSecret = Masked(clientSecret),
