@@ -81,8 +81,8 @@ That is the purpose this document.
      * Demand electricity (6)
      * Forward or reverse metering (8)
      * Cost (12)
-   * Billing infomration (15, 16, 17, 27, 28) -- might not be needed but can't hurt
-   * Custoemr information (51, 54, 55, 56, 57, 58, 59, 60, 61) -- for displaying account info on the HA add-on page
+   * Billing information (15, 16, 17, 27, 28) -- might not be needed but can't hurt
+   * Customer information (51, 54, 55, 56, 57, 58, 59, 60, 61) -- for displaying account info on the HA add-on page
 
    Some utilities also require Common (1) and Connect My Data (3), so include those if they are offered.
 
