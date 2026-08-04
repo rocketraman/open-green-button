@@ -21,7 +21,9 @@ The hosted server is a **stateless OAuth proxy**: utilities require a stable pub
 * ✅ **Live!** Niagara Peninsula Energy (Ontario, Canada).
 * ✅ **Live!** Oakville Hydro (Ontario, Canada).
 * ✅ **Live!** Oshawa Power (Ontario, Canada).
+* 🚧 **Registration in progress** Eversource (Massachusetts, USA), thank you Devin Kelly [@dwwkelly]([https://github.com/Mlisk](https://github.com/dwwkelly)).
 * 🚧 **Registration in progress** Pacific Gas & Electric (California).
+* 🚧 **Registration in progress** Toronto Hydro (Ontario, Canada), thank you Mathew Lisk [@Mlisk](https://github.com/Mlisk).
 
 ### New Utility Support
 
