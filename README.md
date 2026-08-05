@@ -12,6 +12,7 @@ The hosted server is a **stateless OAuth proxy**: utilities require a stable pub
 * ✅ **Live!** Elexicon Energy (Ontario, Canada), thank you Muhammad Aziz ([@rabbitholelabsinc](https://github.com/rabbitholelabsinc)).
 * ✅ **Live!** Elk Energy (Ontario, Canada).
 * ✅ **Live!** Enwin (Ontario, Canada).
+* ✅ **Live!** Eversource (Massachusetts, USA), thank you Devin Kelly ([@dwwkelly](https://github.com/dwwkelly)).
 * ✅ **Live!** Festival Hydro (Ontario, Canada).
 * ✅ **Live!** Hydro Ottawa (Ontario, Canada), thank you Mike Wrightly ([@mikewrightly](https://github.com/mikewrightly)).
 * ✅ **Live!** Kentucky Utilities (Kentucky, USA), thank you Tag Howard ([@jthoward64](https://github.com/jthoward64)).
@@ -22,7 +23,6 @@ The hosted server is a **stateless OAuth proxy**: utilities require a stable pub
 * ✅ **Live!** Oakville Hydro (Ontario, Canada).
 * ✅ **Live!** Oshawa Power (Ontario, Canada).
 * 🚧 **Registration in progress** El Paso Electric (New Mexico / Texas, USA).
-* 🚧 **Registration in progress** Eversource (Massachusetts, USA), thank you Devin Kelly ([@dwwkelly](https://github.com/dwwkelly)).
 * 🚧 **Registration in progress** Pacific Gas & Electric (California).
 * 🚧 **Registration in progress** Toronto Hydro (Ontario, Canada), thank you Mathew Lisk ([@Mlisk](https://github.com/Mlisk)).
 
