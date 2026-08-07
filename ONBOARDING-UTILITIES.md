@@ -44,7 +44,7 @@ That is the purpose this document.
 
    If you are asked for **logos**, you can use the logos from here: https://github.com/rocketraman/open-green-button/tree/master/branding (see the `web` directory for PNGs).
 
-   If you are asked for URIs, create a lower-case path slug for the utility e.g. `burlington_hydro` for Burlington Hydro.
+   If you are asked for **URIs**, create a lower-case path slug for the utility e.g. `burlington_hydro` for Burlington Hydro.
    See the following table, replace `<utility_slug>` with the slug you created:
 
    | Form Field | URI                                                                                                           |
