@@ -36,6 +36,10 @@ That is the purpose this document.
 
    > Customer energy usage and cost / billing information is made available to the customer for use within their own on-premises analysis software. We also obtain customer account information for display within the same software, so that customer can visually associate their account with the integration.
 
+   If you are asked for a **security statement** or **security certifications**, use:
+
+   > Data is never stored by us -- end consumers store their own data on their own systems. Please see the description of the product and "Privacy is built-in" section at https://opengreenbutton.org/.
+
    If you are asked for **title / subtitle**, use "Open Green Button Home Assistant Integration".
 
    If you are asked for **logos**, you can use the logos from here: https://github.com/rocketraman/open-green-button/tree/master/branding (see the `web` directory for PNGs).
