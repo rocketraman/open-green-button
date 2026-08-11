@@ -10,7 +10,10 @@ Most third-party data providers ingest the data and provide access to it via the
 In this project, we simply allow you, the customer, to use "Open Green Button" as a proxy to obtain your own data, via client-side add-ons like [Open Green Button Home Assistant](https://github.com/rocketraman/open-green-button-homeassistant/).
 
 To set this up, utilities require each third party to register with them.
-That is the purpose this document.
+That is the purpose of this document.
+
+Registering makes **you** — not the project, which is not a legal entity — the party to the utility's agreement, and sharing credentials with the hosted proxy carries its own implications.
+Both are covered in [Legal](README.md#legal); please read that section before you start.
 
 ## Steps
 
@@ -111,6 +114,8 @@ If no client certificate was required, note "Not checked by utility."
 1. Please share any secrets, such as client id and client password by sending them to [rocketraman@gmail.com](mailto:rocketraman@gmail.com).
 I will upload the credentials into the running proxy on Fly.io as secrets.
 In addition, if there are any credentials for portal or dashboard access, please share those as well.
+
+This step is what puts your utility connection on the community's hosted proxy, and it is optional — see [the hosted proxy](README.md#the-hosted-proxy) for what it means for you as the registrant, and [docs/deployment.md](docs/deployment.md) if you would rather run your own deployment and keep the credentials yourself.
 
 1. After that we follow the utility registration process.
 This will generally require setting up a test account against a sandbox system, having the utility validate it, and then the utility will move us to production, providing us with the necessary URLs and credentials.
