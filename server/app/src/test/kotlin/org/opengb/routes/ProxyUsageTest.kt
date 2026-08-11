@@ -14,6 +14,7 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.OutgoingContent
@@ -33,6 +34,7 @@ import org.opengb.config.ServerConfig
 import org.opengb.config.StateConfig
 import org.opengb.proxy.RefreshBlob
 import org.opengb.proxy.TokenCrypto
+import org.opengb.utility.DateFilterFormat
 import org.opengb.utility.RefreshScope
 import org.opengb.utility.TokenAuthStyle
 import org.opengb.utility.UtilityProfile
@@ -224,7 +226,7 @@ val ProxyUsageTest by testSuite {
     }
   }
 
-  test("202 utility_data_pending when the resource server defers a large dataset") {
+  test("202 utility_data_pending when the resource server defers the dataset") {
     runProxyUsage(resourceStatus = HttpStatusCode.Accepted) { client, ctx ->
       val resp = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob)
       // Distinct from the generic 502 path: a utility 202 (async batch / "available later")
@@ -232,6 +234,95 @@ val ProxyUsageTest by testSuite {
       assert(resp.status == HttpStatusCode.Accepted) { resp.bodyAsText() }
       assert(resp.bodyAsText().contains("utility_data_pending")) { resp.bodyAsText() }
     }
+  }
+
+  test("202 forwards the custodian's headers and body so the async batch is diagnosable") {
+    // An async 202 is not reproducible without a live authorization at a custodian that defers,
+    // and the one confirmed case (Alectra) is production-only — so the response detail we forward
+    // here IS the investigation. Location/Content-Location in particular decides whether the
+    // prepared batch is reachable statelessly or whether the proxy needs to grow storage to
+    // correlate the out-of-band BatchList notification. Mirrors the 4xx/5xx path.
+    runProxyUsage(
+      resourceStatus = HttpStatusCode.Accepted,
+      resourceErrorBody = "<batch>queued</batch>",
+      resourceResponseHeaders =
+        headersOf(
+          HttpHeaders.Location to listOf("https://utility.mock/Batch/Bulk/000001"),
+          HttpHeaders.RetryAfter to listOf("60"),
+        ),
+    ) { client, ctx ->
+      val resp = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob)
+      val body = resp.bodyAsText()
+      assert(resp.status == HttpStatusCode.Accepted) { body }
+      assert(body.contains("utility_data_pending")) { body }
+      assert(body.contains("https://utility.mock/Batch/Bulk/000001")) { body }
+      assert(body.contains("Retry-After", ignoreCase = true)) { body }
+      assert(body.contains("<batch>queued</batch>")) { body }
+    }
+  }
+
+  test("a utility quirk sends published-min as a day-ceilinged date with no published-max") {
+    // Alectra (Savage Data) answers with 202 and prepares the dataset under a URL it canonicalizes
+    // itself — date only, rounded up, no -max. See UtilityQuirks.dateFilterFormat for the single
+    // BatchList sample this is inferred from. 2024-02-23T05:00:00Z is mid-day, so it ceilings to
+    // the 24th; the -max must be absent entirely, not merely reformatted.
+    var capturedUrl: io.ktor.http.Url? = null
+    runProxyUsage(
+      captureResourceRequest = { capturedUrl = it.url },
+      quirks = UtilityQuirks(dateFilterFormat = DateFilterFormat.DATE_CEILING, sendsPublishedMax = false),
+    ) { client, ctx ->
+      val resp =
+        client.postProxyUsage(
+          ctx.proxyToken,
+          ctx.encryptedBlob,
+          publishedMin = Instant.parse("2024-02-23T05:00:00Z"),
+          publishedMax = Instant.parse("2026-02-24T05:00:00Z"),
+        )
+      assert(resp.status == HttpStatusCode.OK) { resp.bodyAsText() }
+    }
+    val parsed = capturedUrl ?: error("resource server was not called")
+    assert(parsed.parameters["published-min"] == "2024-02-24") { parsed.toString() }
+    assert(parsed.parameters["published-max"] == null) { parsed.toString() }
+  }
+
+  test("an instant already on a day boundary is not pushed to the next day") {
+    // Guard the ceiling's edge: midnight UTC is already a whole day, so rounding it up would
+    // silently shorten every backfill window by a day.
+    var capturedUrl: io.ktor.http.Url? = null
+    runProxyUsage(
+      captureResourceRequest = { capturedUrl = it.url },
+      quirks = UtilityQuirks(dateFilterFormat = DateFilterFormat.DATE_CEILING),
+    ) { client, ctx ->
+      val resp =
+        client.postProxyUsage(
+          ctx.proxyToken,
+          ctx.encryptedBlob,
+          publishedMin = Instant.parse("2024-02-23T00:00:00Z"),
+        )
+      assert(resp.status == HttpStatusCode.OK) { resp.bodyAsText() }
+    }
+    val parsed = capturedUrl ?: error("resource server was not called")
+    assert(parsed.parameters["published-min"] == "2024-02-23") { parsed.toString() }
+  }
+
+  test("day-ceilinged polls on the same UTC day produce a byte-identical resource URL") {
+    // THE point of the quirk, and the actual bug in issues/10: the HA client recomputes its window
+    // from `now` on every poll, so with instant precision no two requests are ever the same URL —
+    // and a custodian that prepares a batch keyed on the URL it was asked for can never answer the
+    // next poll with it. Day granularity is what makes poll N+1 reproduce poll N.
+    val urls = mutableListOf<String>()
+    for (minute in listOf("2024-02-23T05:00:00Z", "2024-02-23T19:47:31Z")) {
+      runProxyUsage(
+        captureResourceRequest = { urls += it.url.toString() },
+        quirks = UtilityQuirks(dateFilterFormat = DateFilterFormat.DATE_CEILING, sendsPublishedMax = false),
+      ) { client, ctx ->
+        val resp =
+          client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob, publishedMin = Instant.parse(minute))
+        assert(resp.status == HttpStatusCode.OK) { resp.bodyAsText() }
+      }
+    }
+    assert(urls.size == 2) { urls.toString() }
+    assert(urls[0] == urls[1]) { urls.toString() }
   }
 
   test("400 invalid_request when publishedMin is sent as a JSON number instead of a string") {
@@ -393,6 +484,10 @@ private fun runProxyUsage(
   // custodian that echoed no scope.
   blobScope: String? = "FB=1;IntervalDuration=900",
   quirks: UtilityQuirks = UtilityQuirks(),
+  // Body and headers the mock resource server returns on a NON-200 `resourceStatus`. Both matter
+  // for the 202 path, where the proxy's whole job is to surface what the custodian said.
+  resourceErrorBody: String = "utility resource server down",
+  resourceResponseHeaders: Headers = Headers.Empty,
   block: suspend (io.ktor.client.HttpClient, ProxyUsageCtx) -> Unit,
 ) {
   val subscriptionUri = "https://utility.mock/espi/1_1/resource/Batch/Subscription/42"
@@ -426,6 +521,8 @@ private fun runProxyUsage(
             tokenResponseJson,
             captureResourceRequest,
             captureTokenRequest,
+            resourceErrorBody,
+            resourceResponseHeaders,
           )
         }
       }
@@ -481,6 +578,8 @@ private fun MockRequestHandleScope.handleMockRequest(
   tokenResponseJson: String,
   captureResourceRequest: ((HttpRequestData) -> Unit)?,
   captureTokenRequest: ((HttpRequestData) -> Unit)?,
+  resourceErrorBody: String,
+  resourceResponseHeaders: Headers,
 ) = when {
   request.url.toString().startsWith("https://utility.mock/token") -> {
     captureTokenRequest?.invoke(request)
@@ -503,7 +602,7 @@ private fun MockRequestHandleScope.handleMockRequest(
         headers = headersOf(HttpHeaders.ContentType, "application/atom+xml"),
       )
     } else {
-      respond(content = "utility resource server down", status = resourceStatus)
+      respond(content = resourceErrorBody, status = resourceStatus, headers = resourceResponseHeaders)
     }
   }
   else -> respondError(HttpStatusCode.NotImplemented)

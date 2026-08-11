@@ -118,6 +118,54 @@ data class UtilityQuirks(
    * `published`.
    */
   val dateFilterParam: String? = null,
+  /**
+   * Wire format for the ESPI date-filter *values* this utility's resource server keys its prepared
+   * batches on. Default [DateFilterFormat.INSTANT] is the spec form and what every synchronous
+   * custodian gets.
+   *
+   * Exists for custodians that answer the batch request with **202 Accepted** (ESPI asynchronous
+   * batch delivery) and then prepare the dataset under a URL of their OWN choosing — one they
+   * canonicalize from what we asked for. Our request only matches the prepared batch if we ask in
+   * the custodian's canonical form; ask in ours and every poll enqueues a fresh job and gets a
+   * fresh 202, forever. See [sendsPublishedMax], which travels with this.
+   *
+   * INFERRED FROM A SINGLE SAMPLE — treat as unconfirmed. Alectra (Savage Data) POSTed a BatchList
+   * to /notify/alectra on 2026-08-06T20:31:01Z naming
+   * `…/Batch/Subscription/{id}?published-min=2024-08-07` in answer to a request whose actual
+   * published-min was `2024-08-06T20:19Z` and which also carried a published-max: date only, no
+   * `-max`, and rounded UP to the next whole day. Whether the custodian truly keys by URL, and
+   * whether the rounding is a ceiling or an off-by-one we've misread, is exactly what the 202
+   * diagnostics in [org.opengb.routes.ProxyUsage] are there to settle. Revisit this once a real
+   * 202's headers and body are in the logs.
+   *
+   * KNOWN COST of the ceiling: it moves `-min` FORWARD by up to a day, which eats into the one-day
+   * overlap the client leaves on an incremental poll to catch late-published corrections — in the
+   * worst case reducing that margin to nothing. Acceptable only because the alternative here is
+   * the status quo of no data at all; if the logs show the custodian floors rather than ceilings,
+   * prefer flooring, which spends margin in the safe direction.
+   */
+  val dateFilterFormat: DateFilterFormat = DateFilterFormat.INSTANT,
+  /**
+   * Whether to send the `-max` half of the ESPI date-range filter at all. Default `true` (spec
+   * behaviour). Set `false` for a custodian that drops it when canonicalizing an asynchronous
+   * batch request — sending a half the custodian discards guarantees our URL never matches the
+   * batch it prepared. Companion to [dateFilterFormat]; the two were observed together and only
+   * make sense together.
+   *
+   * Safe to turn off: the `-max` bound only ever excluded future-dated readings, which no
+   * custodian publishes (see the clamp in [org.opengb.proxy.UsageClient]), so omitting it widens
+   * the window to "everything published since `-min`" — which is what an incremental poll wants.
+   */
+  val sendsPublishedMax: Boolean = true,
 )
+
+/** Wire format for ESPI date-filter values. See [UtilityQuirks.dateFilterFormat]. */
+enum class DateFilterFormat {
+  /** ISO 8601 instant, e.g. `2024-08-06T20:19:33Z` — the ESPI spec form. */
+  INSTANT,
+
+  /** Date only, rounded UP to the next whole UTC day, e.g. `2024-08-07`. */
+  DATE_CEILING,
+}
 
 data class UtilitiesConfig(val utilities: List<UtilityProfile> = emptyList())

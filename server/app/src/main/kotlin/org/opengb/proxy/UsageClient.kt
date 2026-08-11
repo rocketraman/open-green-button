@@ -8,7 +8,9 @@ import io.ktor.client.statement.HttpStatement
 import io.ktor.http.HttpHeaders
 import io.ktor.http.URLBuilder
 import org.opengb.http.UtilityHttpClients
+import org.opengb.utility.DateFilterFormat
 import org.opengb.utility.UtilityProfile
+import java.time.LocalDate
 import kotlin.time.Instant
 
 /**
@@ -34,16 +36,18 @@ class UsageClient(private val clients: UtilityHttpClients) {
     // Base name of the ESPI date-range query params (`published` → published-min/published-max).
     // Overridable per request for diagnosing a non-conforming custodian (e.g. `updated`).
     val base = dateFilterParam?.takeIf { it.isNotBlank() } ?: "published"
-    // ESPI expects ISO 8601 (Instant.toString(), e.g. 2026-06-08T00:00:00Z) for these params.
     // Clamp published-max to now: no utility publishes future-dated readings, and savagedata
     // rejects a future published-max with a bare 400 (the Home Assistant client sends now + a
-    // 1-day lookahead margin, which is what tripped this).
-    val effectiveMax = publishedMax?.let { minOf(it, nowInstant()) }
+    // 1-day lookahead margin, which is what tripped this). Dropped entirely for a custodian that
+    // discards it when canonicalizing an async batch request — see UtilityQuirks.sendsPublishedMax.
+    val effectiveMax =
+      publishedMax?.takeIf { utility.quirks.sendsPublishedMax }?.let { minOf(it, nowInstant()) }
+    val format = utility.quirks.dateFilterFormat
     val url =
       URLBuilder(subscriptionUri)
         .apply {
-          publishedMin?.let { parameters.append("$base-min", it.toString()) }
-          effectiveMax?.let { parameters.append("$base-max", it.toString()) }
+          publishedMin?.let { parameters.append("$base-min", format.render(it)) }
+          effectiveMax?.let { parameters.append("$base-max", format.render(it)) }
         }.buildString()
 
     return clients.forUtility(utility).prepareGet(url) {
@@ -82,3 +86,25 @@ class UsageClient(private val clients: UtilityHttpClients) {
     const val MILLIS_PER_SECOND = 1000L
   }
 }
+
+/**
+ * Render an ESPI date-filter value in the form the custodian expects.
+ *
+ * [DateFilterFormat.DATE_CEILING] deliberately erases the time of day. That is the POINT, not a
+ * loss: it makes two polls on the same UTC day produce a byte-identical URL, which is the property
+ * an asynchronous-batch custodian needs to hand back the dataset it prepared for the previous poll
+ * instead of enqueuing a new job. A `-min` that drifts by a second every poll can never match.
+ */
+private fun DateFilterFormat.render(instant: Instant): String =
+  when (this) {
+    DateFilterFormat.INSTANT -> instant.toString()
+    DateFilterFormat.DATE_CEILING -> LocalDate.ofEpochDay(ceilToWholeDay(instant)).toString()
+  }
+
+/** Days since the epoch, rounded UP — an instant already on a day boundary stays put. */
+private fun ceilToWholeDay(instant: Instant): Long {
+  val days = Math.floorDiv(instant.epochSeconds, SECONDS_PER_DAY)
+  return if (Math.floorMod(instant.epochSeconds, SECONDS_PER_DAY) == 0L) days else days + 1
+}
+
+private const val SECONDS_PER_DAY = 86_400L

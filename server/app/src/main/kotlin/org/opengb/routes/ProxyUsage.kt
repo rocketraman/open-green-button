@@ -18,6 +18,8 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
+import org.apache.logging.log4j.kotlin.logger
+import org.apache.logging.log4j.message.StringMapMessage
 import org.opengb.AppDeps
 import org.opengb.oauth.OAuthException
 import org.opengb.proxy.BlobDecryptionException
@@ -48,6 +50,8 @@ import kotlin.time.Instant
  * The HA client checks for these on every successful response and updates its config entry
  * when present.
  */
+private val proxyLog = logger("opengb.proxy")
+
 fun Application.installProxyUsage(
   deps: AppDeps,
   usageClient: UsageClient,
@@ -387,18 +391,44 @@ private suspend fun ApplicationCall.streamResource(
 }
 
 private suspend fun ApplicationCall.handleUpstreamAccepted(upstream: HttpResponse) {
-  // ESPI asynchronous batch delivery: the utility accepted the request but the dataset is
-  // large enough that it's being assembled out-of-band. Per spec it will later POST an ESPI
-  // Notification (a BatchList of resource URIs) to our registered NotificationURI — which we
-  // currently discard (see Notify.kt). Until that retrieval flow exists, surface a DISTINCT,
-  // machine-readable signal — passing the utility's 202 semantics through with a dedicated
-  // `utility_data_pending` error key — so the HA client can guide the user instead of looping
-  // on a generic upstream error.
+  // ESPI asynchronous batch delivery: the utility accepted the request but is assembling the
+  // dataset out-of-band. Per spec it later POSTs an ESPI Notification (a BatchList of resource
+  // URIs) to our registered NotificationURI — which we currently discard (see Notify.kt). Until
+  // that retrieval flow exists, surface a DISTINCT, machine-readable signal — passing the
+  // utility's 202 semantics through with a dedicated `utility_data_pending` error key — so the HA
+  // client can guide the user instead of looping on a generic upstream error.
+  //
+  // Capture the WHOLE response, exactly as [handleUpstreamFailure] does for an error. A 202 body
+  // is a status document, not a feed, so reading it costs nothing and there is nothing to stream.
+  // This is the only window we have onto what a live async custodian actually says: it is not
+  // reproducible without a real authorization at a custodian that defers, and Alectra (the one
+  // confirmed case, github.com/rocketraman/open-green-button-homeassistant/issues/10) is
+  // production-only. Whether the 202 names the prepared batch's URL decides the whole fix: if it
+  // does, the client can hand that URL back on the next poll and we never need to correlate an
+  // out-of-band notification to a subscription — the proxy stays stateless. If it doesn't,
+  // consuming the BatchList (and giving the proxy real storage) is the only way through.
+  val body = upstream.bodyAsText().take(MAX_UPSTREAM_ERROR_SNIPPET)
+  val responseHeaders =
+    upstream.headers.entries().joinToString(", ") { (name, values) -> "$name: ${values.joinToString(",")}" }
+  // Called out separately from the header dump because these are the decisive fields — worth
+  // being greppable on their own rather than buried in a header blob.
+  val batchLocation = upstream.headers[HttpHeaders.Location] ?: upstream.headers["Content-Location"]
+  proxyLog.info(
+    StringMapMessage().apply {
+      put("espi.async_batch.request_url", upstream.call.request.url.toString())
+      put("http.response.status_code", upstream.status.value.toString())
+      put("http.response.headers", responseHeaders)
+      batchLocation?.let { put("espi.async_batch.location", it) }
+      upstream.headers[HttpHeaders.RetryAfter]?.let { put("http.response.retry_after", it) }
+      if (body.isNotBlank()) put("http.response.body", body)
+    },
+  )
   respondError(
     HttpStatusCode.Accepted,
     "utility_data_pending",
     "Utility returned 202 Accepted for ${upstream.call.request.url}: the dataset is being " +
-      "prepared asynchronously and background (async batch) delivery is not yet supported",
+      "prepared asynchronously and background (async batch) delivery is not yet supported | " +
+      "response-headers: [$responseHeaders] | body: $body",
   )
 }
 

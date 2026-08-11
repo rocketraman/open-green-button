@@ -11,7 +11,7 @@ data class RefreshScopeHolder(val refreshScope: RefreshScope = RefreshScope.Gran
 // Build a HOCON-string loader WITHOUT the default env/system-property sources — the interactive
 // shell's Lmod exports carry `${...}` in their values and break Hoplite's substitution pass (see
 // the reference note on loadConfig). We add back everything else the default loader has.
-private inline fun <reified T : Any> loadHocon(hocon: String): T =
+internal inline fun <reified T : Any> loadHocon(hocon: String): T =
   ConfigLoaderBuilder
     .empty()
     .addDefaultDecoders()
