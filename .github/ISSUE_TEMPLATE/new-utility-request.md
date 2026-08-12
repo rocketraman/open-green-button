@@ -7,6 +7,8 @@ assignees: ''
 
 ---
 
+- [ ] I have [searched for duplicates](https://github.com/rocketraman/open-green-button/issues?q=is%3Aissue%20state%3Aopen%20example) (react with a thumbs up to existing reports instead).
+
 # Utility Information
 
 Provide information about the utility here:
@@ -18,5 +20,5 @@ Provide information about the utility here:
 
 # Contribution Support
 
-- [x] Are you willing to work with the utility to register this integration? If yes, read the [Onboarding Instructions](https://github.com/rocketraman/open-green-button/blob/master/ONBOARDING-UTILITIES.md)!
-- [x] Are you willing to test integrations with this utility?
+- [ ] Are you willing to work with the utility to register this integration? If yes, read the [Onboarding Instructions](https://github.com/rocketraman/open-green-button/blob/master/ONBOARDING-UTILITIES.md)!
+- [ ] Are you willing to test integrations with this utility?
