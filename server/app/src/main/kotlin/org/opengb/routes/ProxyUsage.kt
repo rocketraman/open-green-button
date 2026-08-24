@@ -80,6 +80,23 @@ data class ProxyUsageRequest(
    * precedence over this field (see [streamResource]).
    */
   val dateFilterParam: String? = null,
+  /**
+   * RELATIVE ESPI resource suffix to fetch instead of the subscription itself, e.g. `UsagePoint`
+   * or `UsagePoint/{id}`. Joined onto the subscription URI from the caller's own encrypted blob.
+   *
+   * Exists because an asynchronous-batch custodian answers the subscription-level batch URL with
+   * 202 forever — it is an enqueue endpoint, not a readable one — and notifies the prepared data
+   * at a per-UsagePoint URL underneath it. Only the client knows which resources it wants and how
+   * to parse them, so it names the suffix and this stays a pass-through: no parsing, no
+   * aggregation, no per-utility knowledge.
+   *
+   * Deliberately a SUFFIX and not a URL. The proxy attaches the user's utility access token to
+   * whatever it fetches, so accepting a caller-supplied absolute URL would make this endpoint an
+   * authenticated SSRF gadget. Constraining it to a relative path under the subscription URI —
+   * which comes from the encrypted blob, never from the request body — means a caller can only
+   * ever reach resources inside its own authorization. See [RESOURCE_PATH_REGEX].
+   */
+  val resourcePath: String? = null,
 )
 
 const val HEADER_NEW_ENCRYPTED_REFRESH_BLOB: String = "OpenGB-New-Encrypted-Refresh-Blob"
@@ -151,9 +168,48 @@ private suspend fun RoutingContext.handleProxyUsage(
   usageClient: UsageClient,
 ) {
   val request = call.parseRequest() ?: return
+  // Validated BEFORE prepareFetch: that call refreshes the utility access token, and for a
+  // custodian issuing one-time refresh tokens (savagedata/OpenIddict) the refresh BURNS the
+  // client's stored token. A malformed request must not cost the caller its credentials.
+  if (!isSafeResourcePath(request.resourcePath)) {
+    return call.respondError(
+      HttpStatusCode.BadRequest,
+      "invalid_resource_path",
+      "resourcePath must be a relative ESPI resource suffix such as `UsagePoint` or " +
+        "`UsagePoint/{id}` — absolute URLs and traversal are rejected",
+    )
+  }
   val fetch = prepareFetch(deps, request) ?: return
-  call.streamResource(usageClient, fetch.utility, fetch.subscriptionUri, fetch.accessToken, request)
+  val resourceUri = resourceUriFor(fetch.subscriptionUri, request.resourcePath)
+  call.streamResource(usageClient, fetch.utility, resourceUri, fetch.accessToken, request)
 }
+
+/**
+ * Short, ESPI-shaped path segments only — letters, digits and hyphens, e.g. `UsagePoint` and
+ * `UsagePoint/1c8dc9de-1c8f-5b47-9a35-4c98e6bd1ce1`.
+ *
+ * The rejections are the point: no scheme or authority (`:` and `//` are unmatched), no traversal
+ * (`.` is unmatched, so `..` cannot appear), no absolute path (a leading `/` is unmatched), no
+ * query or fragment (`?` and `#` are unmatched), and no percent-encoding (`%` is unmatched, so
+ * `%2e%2e` can't smuggle traversal past this and get decoded downstream). Segment counts and
+ * lengths are bounded so a caller can't build an unreasonable URL out of legal characters.
+ */
+private val RESOURCE_PATH_REGEX =
+  Regex("""[A-Za-z][A-Za-z0-9]{0,31}(?:/[A-Za-z0-9][A-Za-z0-9-]{0,63}){0,3}""")
+
+private fun isSafeResourcePath(resourcePath: String?): Boolean =
+  resourcePath == null || RESOURCE_PATH_REGEX.matches(resourcePath)
+
+/** The subscription URI itself, or the validated suffix joined beneath it. */
+private fun resourceUriFor(
+  subscriptionUri: String,
+  resourcePath: String?,
+): String =
+  if (resourcePath.isNullOrEmpty()) {
+    subscriptionUri
+  } else {
+    "${subscriptionUri.trimEnd('/')}/$resourcePath"
+  }
 
 private suspend fun RoutingContext.handleProxyCustomer(
   deps: AppDeps,
