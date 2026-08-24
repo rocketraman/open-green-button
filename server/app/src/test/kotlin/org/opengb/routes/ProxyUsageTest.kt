@@ -429,6 +429,87 @@ val ProxyUsageTest by testSuite {
     // published-min (in the past) is passed through untouched, as ISO 8601.
     assert(parsed.parameters["published-min"] == "2024-02-23T05:00:00Z") { parsed.toString() }
   }
+
+  test("a relative resourcePath is fetched beneath the subscription URI") {
+    // The whole point of the parameter: an async-batch custodian answers the subscription-level
+    // batch URL with 202 forever and notifies the prepared data at a per-UsagePoint URL under it.
+    // The client names that suffix; the proxy joins it to the subscription URI from the blob.
+    var capturedUrl: io.ktor.http.Url? = null
+    runProxyUsage(captureResourceRequest = { capturedUrl = it.url }) { client, ctx ->
+      val resp =
+        client.postProxyUsage(
+          ctx.proxyToken,
+          ctx.encryptedBlob,
+          resourcePath = "UsagePoint/1c8dc9de-1c8f-5b47-9a35-4c98e6bd1ce1",
+        )
+      assert(resp.status == HttpStatusCode.OK) { resp.bodyAsText() }
+    }
+    val parsed = capturedUrl ?: error("resource server was not called")
+    assert(
+      parsed.encodedPath ==
+        "/espi/1_1/resource/Batch/Subscription/42/UsagePoint/1c8dc9de-1c8f-5b47-9a35-4c98e6bd1ce1",
+    ) { parsed.toString() }
+  }
+
+  test("the date filter still applies to a resourcePath fetch") {
+    // Whether a per-UsagePoint batch URL honours published-min is exactly the open question the
+    // HA client is being deployed to answer, so the filter must survive onto the suffixed URL.
+    var capturedUrl: io.ktor.http.Url? = null
+    runProxyUsage(captureResourceRequest = { capturedUrl = it.url }) { client, ctx ->
+      val resp =
+        client.postProxyUsage(
+          ctx.proxyToken,
+          ctx.encryptedBlob,
+          publishedMin = Instant.parse("2024-02-23T05:00:00Z"),
+          resourcePath = "UsagePoint",
+        )
+      assert(resp.status == HttpStatusCode.OK) { resp.bodyAsText() }
+    }
+    val parsed = capturedUrl ?: error("resource server was not called")
+    assert(parsed.parameters["published-min"] == "2024-02-23T05:00:00Z") { parsed.toString() }
+  }
+
+  test("a hostile resourcePath is rejected without spending a token refresh") {
+    // These must never reach the resource client: the proxy attaches the user's utility access
+    // token to whatever it fetches, so an absolute URL or a traversal escape would turn this
+    // endpoint into an authenticated SSRF gadget. Rejection happens BEFORE the token refresh,
+    // because for a one-time-refresh-token custodian that refresh burns the caller's stored
+    // credentials — a malformed request must not cost them their authorization.
+    val hostile =
+      listOf(
+        "https://evil.example/steal",
+        "//evil.example/steal",
+        "../../../Authorization/9",
+        "UsagePoint/../../Subscription/99",
+        "%2e%2e%2fSubscription%2f99",
+        "/espi/1_1/resource/Batch/Subscription/99",
+        "UsagePoint?published-min=2020-01-01",
+        "UsagePoint#frag",
+      )
+    for (path in hostile) {
+      var resourceCalled = false
+      var tokenCalled = false
+      runProxyUsage(
+        captureResourceRequest = { resourceCalled = true },
+        captureTokenRequest = { tokenCalled = true },
+      ) { client, ctx ->
+        val resp = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob, resourcePath = path)
+        assert(resp.status == HttpStatusCode.BadRequest) { "$path -> ${resp.status}" }
+      }
+      assert(!resourceCalled) { "resource server was called for $path" }
+      assert(!tokenCalled) { "token endpoint was called for $path" }
+    }
+  }
+
+  test("no resourcePath still fetches the subscription itself") {
+    var capturedUrl: io.ktor.http.Url? = null
+    runProxyUsage(captureResourceRequest = { capturedUrl = it.url }) { client, ctx ->
+      val resp = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob)
+      assert(resp.status == HttpStatusCode.OK) { resp.bodyAsText() }
+    }
+    val parsed = capturedUrl ?: error("resource server was not called")
+    assert(parsed.encodedPath == "/espi/1_1/resource/Batch/Subscription/42") { parsed.toString() }
+  }
 }
 
 private data class ProxyUsageCtx(
@@ -449,12 +530,14 @@ private fun scopeSentOnRefresh(request: HttpRequestData): String? {
 
 private val testJson = Json { encodeDefaults = false }
 
+@Suppress("LongParameterList") // mirrors ProxyUsageRequest's own field list
 private suspend fun HttpClient.postProxyUsage(
   presentedToken: String,
   encryptedBlob: String,
   publishedMin: Instant? = null,
   publishedMax: Instant? = null,
   dateFilterParam: String? = null,
+  resourcePath: String? = null,
 ): HttpResponse =
   post("/proxy/usage") {
     header(HttpHeaders.Authorization, "Bearer $presentedToken")
@@ -466,6 +549,7 @@ private suspend fun HttpClient.postProxyUsage(
           publishedMin = publishedMin,
           publishedMax = publishedMax,
           dateFilterParam = dateFilterParam,
+          resourcePath = resourcePath,
         ),
       ),
     )
