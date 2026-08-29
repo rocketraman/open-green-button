@@ -11,6 +11,7 @@ The hosted server is a **stateless OAuth proxy**: utilities require a stable pub
 * ✅ **Live!** Consumers Energy (Michigan, USA), thank you Michael Phillippi ([@philliml74](https://github.com/philliml74)).
 * ✅ **Live!** Elexicon Energy (Ontario, Canada), thank you Muhammad Aziz ([@rabbitholelabsinc](https://github.com/rabbitholelabsinc)).
 * ✅ **Live!** Elk Energy (Ontario, Canada).
+* ✅ **Live!** El Paso Electric (New Mexico / Texas, USA).
 * ✅ **Live!** Enwin (Ontario, Canada).
 * ✅ **Live!** Eversource (Massachusetts, USA), thank you Devin Kelly ([@dwwkelly](https://github.com/dwwkelly)).
 * ✅ **Live!** Festival Hydro (Ontario, Canada).
