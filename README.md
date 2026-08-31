@@ -26,8 +26,7 @@ The hosted server is a **stateless OAuth proxy**: utilities require a stable pub
 * ✅ **Live!** Toronto Hydro (Ontario, Canada), thank you Mathew Lisk ([@Mlisk](https://github.com/Mlisk)).
 * 🚧 **Registration in progress** El Paso Electric (New Mexico / Texas, USA).
 * 🚧 **Registration in progress** Pacific Gas & Electric (California).
-* 🚧 **Registration in progress** Toronto Hydro (Ontario, Canada), thank you Mathew Lisk ([@Mlisk](https://github.com/Mlisk)).
-
+  
 ### New Utility Support
 
 Request a new utility here:
