@@ -25,8 +25,9 @@ The hosted server is a **stateless OAuth proxy**: utilities require a stable pub
 * ✅ **Live!** Oshawa Power (Ontario, Canada).
 * ✅ **Live!** Toronto Hydro (Ontario, Canada), thank you Mathew Lisk ([@Mlisk](https://github.com/Mlisk)).
 * 🚧 **Registration in progress** El Paso Electric (New Mexico / Texas, USA).
+* 🚧 **Registration in progress** Fortis Ontario (Algoma Power, Canadian Niagara Power, Cornwall Electric, Eastern Ontario Power) (Ontario, Canada).
 * 🚧 **Registration in progress** Pacific Gas & Electric (California).
-  
+
 ### New Utility Support
 
 Request a new utility here:
