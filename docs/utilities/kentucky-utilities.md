@@ -1,10 +1,11 @@
 # Kentucky Utilities
 
 Part of **LG&E and KU Energy** (PPL Corp), on the **My Meter** platform (`mymeter.lge-ku.com`).
+Note that this *Kentucky Utilities* integration works for *Louisville Gas and Electric* customers but provides Electric usage only.  There is another request for LG&E as a new integration (https://github.com/rocketraman/open-green-button/issues/32), which may also provide Gas usage, but those interested in Electric only tracking can use the *Kentucky Utilities* integration sucessfully as LG&E customers.
 
 ## Information on File
 
-Registration created by Joshua Tag Howard (@jaudi23) using his own contact information.
+Registration created by Joshua Tag Howard (@jthoward64) using his own contact information.
 See https://github.com/rocketraman/open-green-button/issues/15.
 
 ## mTLS Status
