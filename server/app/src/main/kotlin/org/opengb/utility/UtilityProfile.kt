@@ -124,24 +124,32 @@ data class UtilityQuirks(
    * custodian gets.
    *
    * Exists for custodians that answer the batch request with **202 Accepted** (ESPI asynchronous
-   * batch delivery) and then prepare the dataset under a URL of their OWN choosing — one they
-   * canonicalize from what we asked for. Our request only matches the prepared batch if we ask in
-   * the custodian's canonical form; ask in ours and every poll enqueues a fresh job and gets a
-   * fresh 202, forever. See [sendsPublishedMax], which travels with this.
+   * batch delivery) and then name the prepared dataset under a URL of their OWN choosing — one
+   * they canonicalize from what we asked for. This asks in the custodian's canonical form. See
+   * [sendsPublishedMax], which travels with this.
    *
-   * INFERRED FROM A SINGLE SAMPLE — treat as unconfirmed. Alectra (Savage Data) POSTed a BatchList
-   * to /notify/alectra on 2026-08-06T20:31:01Z naming
+   * THIS DOES NOT RESOLVE THE 202. It was introduced on the theory that a request only matches
+   * the prepared batch if it is spelled the custodian's way, and that asking in ours enqueued a
+   * fresh job on every poll. That was refuted on Alectra (open-green-button-homeassistant
+   * issues/10): 252 byte-identical requests over 33 hours all returned 202. The subscription-level
+   * batch URL is an enqueue endpoint that never serves the dataset; the prepared data is collected
+   * from the per-UsagePoint resources beneath it — see `resourcePath` in
+   * [org.opengb.routes.ProxyUsage]. Do not set this on a utility as a remedy for a 202 loop.
+   *
+   * What remains is a single observation: Alectra (Savage Data) POSTed a BatchList to
+   * /notify/alectra on 2026-08-06T20:31:01Z naming
    * `…/Batch/Subscription/{id}?published-min=2024-08-07` in answer to a request whose actual
    * published-min was `2024-08-06T20:19Z` and which also carried a published-max: date only, no
-   * `-max`, and rounded UP to the next whole day. Whether the custodian truly keys by URL, and
-   * whether the rounding is a ceiling or an off-by-one we've misread, is exactly what the 202
-   * diagnostics in [org.opengb.routes.ProxyUsage] are there to settle. Revisit this once a real
-   * 202's headers and body are in the logs.
+   * `-max`, and rounded UP to the next whole day. The date filter also rides on the
+   * per-UsagePoint fetches, and whether the custodian keys THOSE on the canonical form — or
+   * whether the rounding is a ceiling at all rather than an off-by-one we've misread — is
+   * untested. Alectra keeps the setting only for that reason.
    *
    * KNOWN COST of the ceiling: it moves `-min` FORWARD by up to a day, which eats into the one-day
    * overlap the client leaves on an incremental poll to catch late-published corrections — in the
-   * worst case reducing that margin to nothing. Acceptable only because the alternative here is
-   * the status quo of no data at all; if the logs show the custodian floors rather than ceilings,
+   * worst case reducing that margin to nothing. With no demonstrated benefit to set against it,
+   * drop the setting once a per-UsagePoint fetch is shown to work in the spec
+   * [DateFilterFormat.INSTANT] form; if the custodian turns out to floor rather than ceiling,
    * prefer flooring, which spends margin in the safe direction.
    */
   val dateFilterFormat: DateFilterFormat = DateFilterFormat.INSTANT,
