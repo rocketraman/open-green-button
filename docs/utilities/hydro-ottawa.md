@@ -12,3 +12,7 @@ See https://github.com/rocketraman/open-green-button/issues/8.
 ## mTLS Status
 
 Verified via self-signed CA certificate.
+
+## Notes
+
+The provider authorization flow [only works after the first bill is issued](https://github.com/rocketraman/open-green-button/issues/79).
