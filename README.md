@@ -28,6 +28,12 @@ The hosted server is a **stateless OAuth proxy**: utilities require a stable pub
 * 🚧 **Registration in progress** Fortis Ontario (Algoma Power, Canadian Niagara Power, Cornwall Electric, Eastern Ontario Power) (Ontario, Canada).
 * 🚧 **Registration in progress** Pacific Gas & Electric (California).
 
+### Water Data
+
+Utilities whose Green Button service is run by London Hydro provide **electricity only**: Burlington Hydro, Elk Energy, Enwin, Festival Hydro, London Hydro, Newmarket-Tay (NT) Power, Niagara Peninsula Energy, Oakville Hydro, and Oshawa Power.
+Water is not part of Ontario's Green Button mandate, and London Hydro does not offer it for any of these utilities, even where the utility bills you for water.
+See the [London Hydro provider notes](docs/providers/london-hydro.md).
+
 ### New Utility Support
 
 Request a new utility here:

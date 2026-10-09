@@ -1,25 +1,17 @@
-# Burlington Hydro (Ontario, Canada)
-
-Burlington Hydro is the first targeted utility for Open Green Button.
+# Enwin (Ontario, Canada)
 
 ## Provider
 
-Green Button services for Burlington Hydro are provided by London Hydro.
+Green Button services for Enwin are provided by London Hydro.
 
 ## Information on File
 
 Registration created by Raman Gupta (@rocketraman) using his own contact information.
-
-## mTLS Status
-
-Not checked by utility.
 
 ## Water Data
 
 Not available.
 London Hydro does not offer water usage through Green Button for any of the utilities it supports, even where the utility bills you for water.
 Water is supported by the Green Button standard but is not part of Ontario's Green Button mandate, so utilities are not required to implement it (confirmed by London Hydro, October 2026).
-Only electricity data is available for Burlington Hydro through Open Green Button.
+Only electricity data is available for Enwin through Open Green Button.
 See the [London Hydro provider notes](../providers/london-hydro.md).
-
-Requesting the water function block (FB_11) at Burlington's authorize endpoint is rejected with `invalid_scope` (tested 2026-10-09), so do not add it to this utility's `defaultScope`.
