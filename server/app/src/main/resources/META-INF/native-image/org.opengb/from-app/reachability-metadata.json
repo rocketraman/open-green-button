@@ -527,6 +527,9 @@
       "type": "java.io.Serializable"
     },
     {
+      "type": "java.lang.Boolean"
+    },
+    {
       "type": "java.lang.CharSequence"
     },
     {
@@ -2382,6 +2385,12 @@
       ]
     },
     {
+      "type": "org.opengb.utility.DateFilterFormat"
+    },
+    {
+      "type": "org.opengb.utility.RefreshScope"
+    },
+    {
       "type": "org.opengb.utility.TokenAuthStyle"
     },
     {
@@ -2398,6 +2407,9 @@
             "com.sksamuel.hoplite.Secret",
             "java.lang.String",
             "java.lang.String",
+            "org.opengb.utility.RefreshScope",
+            "java.lang.String",
+            "java.lang.String",
             "java.lang.String",
             "org.opengb.utility.TokenAuthStyle",
             "org.opengb.config.ClientAuthConfig",
@@ -2409,7 +2421,21 @@
       ]
     },
     {
-      "type": "org.opengb.utility.UtilityQuirks"
+      "type": "org.opengb.utility.UtilityQuirks",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "boolean",
+            "boolean",
+            "java.lang.String",
+            "org.opengb.utility.DateFilterFormat",
+            "boolean",
+            "int",
+            "kotlin.jvm.internal.DefaultConstructorMarker"
+          ]
+        }
+      ]
     },
     {
       "type": "org.opengb.utility.UtilitySummary",

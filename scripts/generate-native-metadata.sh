@@ -97,19 +97,41 @@ openssl req -x509 -newkey rsa:2048 -sha256 -days 1 -nodes \
 openssl pkcs12 -export -inkey "$KS_DIR/k.key" -in "$KS_DIR/k.crt" \
   -out "$KS_DIR/k.p12" -passout pass:"$KS_PW" >/dev/null 2>&1
 KS_B64="$(base64 -w0 "$KS_DIR/k.p12")"
+# Every live utility in utilities.conf takes its clientId/clientSecret from an optional
+# ${?OPENGB_UTILITY_*} substitution (a Fly secret in production). In this clean env they'd all be
+# unset, the required fields would be missing, and Hoplite would abort boot() before the server
+# ever listens — leaving from-app/ with only the config-load slice of the trace. Give each one a
+# placeholder; the values are irrelevant to reachability, they only have to be present.
+UTILITY_ENV=()
+while IFS= read -r var; do
+  UTILITY_ENV+=("$var=metadata")
+done < <(grep -vE '^[[:space:]]*(#|//)' app/src/main/resources/utilities.conf \
+  | grep -oE '\$\{\??OPENGB_UTILITY_[A-Z0-9_]+\}' | tr -d '${?}' | sort -u)
 env -i HOME="$HOME" LANG="${LANG:-C.UTF-8}" \
   JAVA_HOME="$GVM" GRAALVM_HOME="$GVM" PATH="$GVM/bin:/usr/bin:/bin" \
   OPENGB_HOST_PORT="127.0.0.1:$PORT" OPENGB_PUBLIC_BASE_URL="http://127.0.0.1:$PORT" \
   OPENGB_CLIENTAUTH_KEYSTOREBASE64="$KS_B64" OPENGB_CLIENTAUTH_KEYSTOREPASSWORD="$KS_PW" \
+  "${UTILITY_ENV[@]}" \
   "$GVM/bin/java" "-agentlib:native-image-agent=config-output-dir=$META_APP" \
   -cp "$LIBDIR/*" org.opengb.AppKt >/tmp/opengb-metadata-run.log 2>&1 &
 APP_PID=$!
 
 # Wait for the listener, then exercise the routes so their handlers + logging are traced.
+BOOTED=0
 for _ in $(seq 1 400); do
-  curl -fsS -o /dev/null "http://127.0.0.1:$PORT/health" 2>/dev/null && break
+  if curl -fsS -o /dev/null "http://127.0.0.1:$PORT/health" 2>/dev/null; then BOOTED=1; break; fi
+  kill -0 "$APP_PID" 2>/dev/null || break
   sleep 0.05
 done
+# A boot that dies early (e.g. a config error) still flushes a partial trace on exit, which would
+# pass the emptiness check below and silently gut from-app/. Fail loudly instead.
+if [[ "$BOOTED" != 1 ]]; then
+  kill -9 "$APP_PID" 2>/dev/null || true
+  rm -rf "$KS_DIR"
+  echo "ERROR: the app never answered /health on port $PORT — last lines of its log:" >&2
+  tail -n 20 /tmp/opengb-metadata-run.log | cut -c1-2000 >&2
+  exit 1
+fi
 for path in /health / /utilities /connect/unknown/callback; do
   curl -fsS -o /dev/null "http://127.0.0.1:$PORT$path" 2>/dev/null || true
 done
