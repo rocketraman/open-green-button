@@ -12,6 +12,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import kotlinx.html.HTML
 import kotlinx.html.a
+import kotlinx.html.blockQuote
 import kotlinx.html.body
 import kotlinx.html.code
 import kotlinx.html.details
@@ -116,7 +117,29 @@ private suspend fun io.ktor.server.routing.RoutingContext.handleCallback(deps: A
   val error = call.request.queryParameters["error"]
 
   if (error != null) {
-    call.respondCallbackError("Utility returned error: $error")
+    // RFC 6749 §4.1.2.1: the utility explains the failure in `error_description`. Without it the
+    // customer sees only e.g. "server_error" and can't tell the fault is on the utility's side.
+    val description =
+      call.request.queryParameters["error_description"]
+        ?.trim()
+        ?.take(MAX_ERROR_DESCRIPTION_LENGTH)
+        ?.takeIf { it.isNotEmpty() }
+    // The flow is dead either way, so consume the state. Only echo the description when the state
+    // is one we issued for this utility — otherwise anyone could craft a link that renders
+    // arbitrary text on our domain.
+    val pending = state?.let { deps.stateStore.consume(it) }
+    val trusted = pending?.utilityId == utility.id
+    // Both values are caller-supplied; collapse whitespace so they can't forge log lines.
+    val whitespace = Regex("\\s+")
+    connectLog.warn(
+      "authorize error utility=${utility.id} error=${error.take(100).replace(whitespace, " ")} " +
+        "stateKnown=$trusted description=${description?.replace(whitespace, " ")}",
+    )
+    call.respondCallbackError(
+      "Utility returned error: $error",
+      detail = description.takeIf { trusted },
+      detailSource = utility.displayName,
+    )
     return
   }
   if (state.isNullOrBlank() || code.isNullOrBlank()) {
@@ -210,7 +233,13 @@ private suspend fun io.ktor.server.routing.RoutingContext.exchangeAndBuildBlob(
   )
 }
 
-private suspend fun ApplicationCall.respondCallbackError(message: String) {
+private const val MAX_ERROR_DESCRIPTION_LENGTH = 500
+
+private suspend fun ApplicationCall.respondCallbackError(
+  message: String,
+  detail: String? = null,
+  detailSource: String? = null,
+) {
   respondHtml(HttpStatusCode.BadRequest) {
     head {
       title { +"Authorization failed" }
@@ -220,6 +249,10 @@ private suspend fun ApplicationCall.respondCallbackError(message: String) {
     body {
       h1 { +"Authorization failed" }
       p { +message }
+      if (detail != null) {
+        p { +"Message from ${detailSource ?: "the utility"}:" }
+        blockQuote { +detail }
+      }
       p { +"You can close this window and try again from Home Assistant." }
     }
   }
