@@ -8,7 +8,7 @@ on:
       - 'mise.toml'
       - '.github/workflows/server-ci.yml'
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - 'server/**'
       - 'scripts/generate-native-metadata.sh'

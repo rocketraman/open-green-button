@@ -106,6 +106,177 @@
       ]
     },
     {
+      "type": "com.sksamuel.hoplite.decoder.Base64Decoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.BigDecimalDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.BigIntegerDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.BooleanArrayDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.BooleanDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.ByteArrayDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.ByteDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.CharRangeDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.DataClassDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.DoubleDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.DurationDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.EnumDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.FileDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.FloatDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.InetAddressDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.InlineClassDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.InstantDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.IntDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.IntRangeDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.JavaUtilDateDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.KClassDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.KotlinDurationDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.KotlinInstantDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.LinkedHashMapDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.ListDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.LocalDateDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.LocalDateTimeDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.LocalTimeDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.LocaleDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.LongDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.LongRangeDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.MapDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.MinutesDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.MonthDayDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.PairDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.PathDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.PeriodDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.PrincipalDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.PropsDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.RegexDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.SealedClassDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.SecondsDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.SecretDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.SetDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.ShortDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.SizeInBytesDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.SortedSetDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.SqlTimestampDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.StringDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.TripleDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.URIDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.URLDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.UUIDDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.YearDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.decoder.YearMonthDecoder"
+    },
+    {
+      "type": "com.sksamuel.hoplite.hocon.HoconParser"
+    },
+    {
+      "type": "com.sksamuel.hoplite.parsers.PropsParser"
+    },
+    {
       "type": "com.sun.crypto.provider.GaloisCounterMode$AESGCM",
       "methods": [
         {
@@ -226,9 +397,6 @@
       "type": "io.ktor.http.HttpStatusCode"
     },
     {
-      "type": "io.ktor.http.content.ChannelWriterContent"
-    },
-    {
       "type": "io.ktor.http.content.TextContent"
     },
     {
@@ -339,22 +507,16 @@
       "type": "java.io.Serializable"
     },
     {
+      "type": "java.lang.Boolean"
+    },
+    {
+      "type": "java.lang.CharSequence"
+    },
+    {
       "type": "java.lang.Class",
       "methods": [
         {
           "name": "getModule",
-          "parameterTypes": []
-        },
-        {
-          "name": "getPermittedSubclasses",
-          "parameterTypes": []
-        },
-        {
-          "name": "getRecordComponents",
-          "parameterTypes": []
-        },
-        {
-          "name": "isRecord",
           "parameterTypes": []
         },
         {
@@ -365,6 +527,9 @@
     },
     {
       "type": "java.lang.ClassValue"
+    },
+    {
+      "type": "java.lang.Comparable"
     },
     {
       "type": "java.lang.Enum"
@@ -383,12 +548,7 @@
       "allDeclaredFields": true
     },
     {
-      "type": "java.lang.Thread",
-      "fields": [
-        {
-          "name": "threadLocalRandomProbe"
-        }
-      ]
+      "type": "java.lang.String"
     },
     {
       "type": "java.lang.Throwable",
@@ -398,16 +558,7 @@
       "type": "java.lang.invoke.MethodHandle"
     },
     {
-      "type": "java.lang.module.ModuleDescriptor",
-      "methods": [
-        {
-          "name": "name",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "java.security.SecureRandomParameters"
+      "type": "java.lang.module.ModuleDescriptor"
     },
     {
       "type": "java.sql.Date"
@@ -419,48 +570,16 @@
       "type": "java.util.HashSet"
     },
     {
+      "type": "java.util.LinkedHashMap"
+    },
+    {
       "type": "java.util.LinkedHashSet"
     },
     {
+      "type": "java.util.SortedSet"
+    },
+    {
       "type": "java.util.concurrent.ArrayBlockingQueue"
-    },
-    {
-      "type": "java.util.concurrent.ForkJoinTask",
-      "fields": [
-        {
-          "name": "aux"
-        },
-        {
-          "name": "status"
-        }
-      ]
-    },
-    {
-      "type": "java.util.concurrent.atomic.AtomicBoolean",
-      "fields": [
-        {
-          "name": "value"
-        }
-      ]
-    },
-    {
-      "type": "java.util.concurrent.atomic.AtomicReference",
-      "fields": [
-        {
-          "name": "value"
-        }
-      ]
-    },
-    {
-      "type": "java.util.concurrent.atomic.Striped64",
-      "fields": [
-        {
-          "name": "base"
-        },
-        {
-          "name": "cellsBusy"
-        }
-      ]
     },
     {
       "type": "java.util.concurrent.locks.AbstractOwnableSynchronizer"
@@ -484,16 +603,22 @@
       "type": "javax.servlet.Servlet"
     },
     {
-      "type": "jdk.internal.misc.Unsafe"
-    },
-    {
       "type": "kotlin.Any"
     },
     {
       "type": "kotlin.Boolean"
     },
     {
+      "type": "kotlin.CharSequence"
+    },
+    {
       "type": "kotlin.Cloneable"
+    },
+    {
+      "type": "kotlin.Comparable"
+    },
+    {
+      "type": "kotlin.Enum"
     },
     {
       "type": "kotlin.Function2"
@@ -566,6 +691,9 @@
     },
     {
       "type": "kotlin.collections.Map"
+    },
+    {
+      "type": "kotlin.collections.Set"
     },
     {
       "type": "kotlin.coroutines.jvm.internal.BaseContinuationImpl"
@@ -2236,6 +2364,9 @@
       ]
     },
     {
+      "type": "org.opengb.routes.ConnectCallbackTestKt"
+    },
+    {
       "type": "org.opengb.routes.ErrorBody",
       "fields": [
         {
@@ -2279,7 +2410,101 @@
       "type": "org.opengb.routes.ProxyUsageTestKt"
     },
     {
+      "type": "org.opengb.utility.DateFilterFormat"
+    },
+    {
       "type": "org.opengb.utility.HistoryWindowTestKt"
+    },
+    {
+      "type": "org.opengb.utility.QuirksHolder",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.opengb.utility.UtilityQuirks"
+          ]
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.opengb.utility.UtilityQuirks",
+            "int",
+            "kotlin.jvm.internal.DefaultConstructorMarker"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.opengb.utility.RefreshScope"
+    },
+    {
+      "type": "org.opengb.utility.RefreshScope$Explicit",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.opengb.utility.RefreshScope$Granted",
+      "fields": [
+        {
+          "name": "INSTANCE"
+        }
+      ]
+    },
+    {
+      "type": "org.opengb.utility.RefreshScope$Omit",
+      "fields": [
+        {
+          "name": "INSTANCE"
+        }
+      ]
+    },
+    {
+      "type": "org.opengb.utility.RefreshScopeConfigTestKt"
+    },
+    {
+      "type": "org.opengb.utility.RefreshScopeHolder",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.opengb.utility.RefreshScope"
+          ]
+        },
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.opengb.utility.RefreshScope",
+            "int",
+            "kotlin.jvm.internal.DefaultConstructorMarker"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.opengb.utility.UtilityQuirks",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "boolean",
+            "boolean",
+            "java.lang.String",
+            "org.opengb.utility.DateFilterFormat",
+            "boolean",
+            "int",
+            "kotlin.jvm.internal.DefaultConstructorMarker"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.opengb.utility.UtilityQuirksConfigTestKt"
     },
     {
       "type": "org.opengb.utility.UtilitySummary",
@@ -2304,10 +2529,6 @@
     {
       "type": "sun.security.provider.NativePRNG",
       "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
         {
           "name": "<init>",
           "parameterTypes": [
@@ -2341,6 +2562,12 @@
     },
     {
       "glob": "META-INF/org/apache/logging/log4j/core/config/plugins/Log4j2Plugins.dat"
+    },
+    {
+      "glob": "META-INF/services/com.sksamuel.hoplite.decoder.Decoder"
+    },
+    {
+      "glob": "META-INF/services/com.sksamuel.hoplite.parsers.Parser"
     },
     {
       "glob": "META-INF/services/io.ktor.serialization.kotlinx.KotlinxSerializationExtensionProvider"
@@ -2416,12 +2643,6 @@
     },
     {
       "glob": "junit-platform.properties"
-    },
-    {
-      "glob": "kotlin/collections/collections.kotlin_builtins"
-    },
-    {
-      "glob": "kotlin/kotlin.kotlin_builtins"
     },
     {
       "glob": "log4j2-test.jsn"
@@ -2506,6 +2727,13 @@
     },
     {
       "glob": "org/slf4j/impl/StaticLoggerBinder.class"
+    },
+    {
+      "glob": "utilities.conf"
+    },
+    {
+      "module": "java.base",
+      "glob": "sun/net/www/content-types.properties"
     },
     {
       "module": "java.xml",
