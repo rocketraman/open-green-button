@@ -304,6 +304,22 @@
       ]
     },
     {
+      "type": "de.infix.testBalloon.framework.core.Test$executeInTestScope$2",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "de.infix.testBalloon.framework.core.internal.TestFramework_jvmKt$runTestAwaitingCompletion$2",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
       "type": "de.infix.testBalloon.framework.core.internal.integration.TestBalloonJUnitPlatformTestEngine"
     },
     {
@@ -320,6 +336,14 @@
     },
     {
       "type": "de.infix.testBalloon.framework.shared.internal.entryPoint.JvmEntryPointKt"
+    },
+    {
+      "type": "io.ktor.callid.CallIdKt$withCallId$2",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
     },
     {
       "type": "io.ktor.client.HttpClient",
@@ -342,6 +366,14 @@
     },
     {
       "type": "io.ktor.client.content.ProgressListener"
+    },
+    {
+      "type": "io.ktor.client.engine.HttpClientEngine$executeWithinCallContext$2",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
     },
     {
       "type": "io.ktor.client.engine.HttpClientEngineBase",
@@ -391,6 +423,22 @@
       "type": "io.ktor.client.statement.HttpResponse"
     },
     {
+      "type": "io.ktor.client.statement.HttpStatement$execute$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "io.ktor.client.statement.HttpStatement$execute$2$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
       "type": "io.ktor.http.ContentType"
     },
     {
@@ -425,10 +473,66 @@
       "type": "io.ktor.server.application.PluginInstance"
     },
     {
+      "type": "io.ktor.server.application.hooks.CallFailed$install$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "io.ktor.server.application.hooks.CallFailed$install$1$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "io.ktor.server.engine.BaseApplicationEngineKt$installDefaultTransformationChecker$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
       "type": "io.ktor.server.engine.BaseApplicationResponse"
     },
     {
+      "type": "io.ktor.server.engine.BaseApplicationResponse$Companion$setupFallbackResponse$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
       "type": "io.ktor.server.plugins.MutableOriginConnectionPoint"
+    },
+    {
+      "type": "io.ktor.server.plugins.callid.CallIdKt$CallId$2$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "io.ktor.server.plugins.callid.CallIdKt$CallId$2$1$2",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "io.ktor.server.plugins.callid.CallIdSetup$install$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
     },
     {
       "type": "io.ktor.server.request.DoubleReceivePreventionToken"
@@ -437,7 +541,47 @@
       "type": "io.ktor.server.routing.RoutingCall"
     },
     {
+      "type": "io.ktor.server.routing.RoutingNode$buildPipeline$1$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
       "type": "io.ktor.server.routing.RoutingRoot"
+    },
+    {
+      "type": "io.ktor.server.routing.RoutingRoot$Plugin$install$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "io.ktor.server.routing.RoutingRoot$executeResult$$inlined$execute$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "io.ktor.server.routing.RoutingRoot$executeResult$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "io.ktor.server.routing.RoutingRoot$interceptor$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
     },
     {
       "type": "io.ktor.server.testing.TestApplication",
@@ -448,10 +592,74 @@
       ]
     },
     {
+      "type": "io.ktor.server.testing.TestApplicationEngine$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "io.ktor.server.testing.TestApplicationEngine$2",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "io.ktor.server.testing.TestApplicationEngine$2$invokeSuspend$$inlined$execute$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "io.ktor.server.testing.TestApplicationEngine$handleRequest$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "io.ktor.server.testing.TestApplicationEngine$handleRequest$2",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "io.ktor.server.testing.TestApplicationEngine$handleRequest$2$invokeSuspend$$inlined$execute$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
       "type": "io.ktor.server.testing.TestApplicationResponse",
       "fields": [
         {
           "name": "writeContentChannel$internal"
+        }
+      ]
+    },
+    {
+      "type": "io.ktor.server.testing.client.DelegatingTestClientEngine$execute$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "io.ktor.server.testing.client.TestHttpClientEngine$execute$1",
+      "fields": [
+        {
+          "name": "label"
         }
       ]
     },
@@ -477,6 +685,14 @@
         },
         {
           "name": "removedRef"
+        }
+      ]
+    },
+    {
+      "type": "io.ktor.util.pipeline.DebugPipelineContext$proceedLoop$1",
+      "fields": [
+        {
+          "name": "label"
         }
       ]
     },
@@ -753,6 +969,14 @@
       ]
     },
     {
+      "type": "kotlinx.coroutines.CancelledContinuation",
+      "fields": [
+        {
+          "name": "_resumed$volatile"
+        }
+      ]
+    },
+    {
       "type": "kotlinx.coroutines.CompletedExceptionally",
       "fields": [
         {
@@ -812,6 +1036,14 @@
         },
         {
           "name": "_rootCause$volatile"
+        }
+      ]
+    },
+    {
+      "type": "kotlinx.coroutines.TimeoutKt$withTimeoutOrNull$1",
+      "fields": [
+        {
+          "name": "label"
         }
       ]
     },
@@ -998,6 +1230,14 @@
       "fields": [
         {
           "name": "container$volatile"
+        }
+      ]
+    },
+    {
+      "type": "kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt$runTest$2$1$1",
+      "fields": [
+        {
+          "name": "label"
         }
       ]
     },
@@ -2338,6 +2578,22 @@
       "type": "org.opengb.TestCtx"
     },
     {
+      "type": "org.opengb.observability.AccessLogKt$installAccessLog$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "org.opengb.observability.AccessLogKt$installAccessLog$1$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
       "type": "org.opengb.observability.LogCaptureKt"
     },
     {
@@ -2345,6 +2601,49 @@
     },
     {
       "type": "org.opengb.onboarding.ApplicationInformationParserTestKt"
+    },
+    {
+      "type": "org.opengb.proxy.BatchNotifications$Expectation$await$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "org.opengb.proxy.BatchNotifications$Expectation$await$2",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "org.opengb.proxy.BatchNotificationsTestKt"
+    },
+    {
+      "type": "org.opengb.proxy.BatchNotificationsTestKt$BatchNotificationsTest$2$3",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "org.opengb.proxy.BatchNotificationsTestKt$BatchNotificationsTest$2$5",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "org.opengb.proxy.BatchNotificationsTestKt$BatchNotificationsTest$2$6",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
     },
     {
       "type": "org.opengb.proxy.TokenCryptoTestKt"
@@ -2394,6 +2693,46 @@
     },
     {
       "type": "org.opengb.routes.ProxyUsageCtx"
+    },
+    {
+      "type": "org.opengb.routes.ProxyUsageKt$handleProxyUsage$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "org.opengb.routes.ProxyUsageKt$handleUpstreamAccepted$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "org.opengb.routes.ProxyUsageKt$installProxyUsage$1$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "org.opengb.routes.ProxyUsageKt$streamResource$1",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
+    },
+    {
+      "type": "org.opengb.routes.ProxyUsageKt$streamResource$2",
+      "fields": [
+        {
+          "name": "label"
+        }
+      ]
     },
     {
       "type": "org.opengb.routes.ProxyUsageRequest",
