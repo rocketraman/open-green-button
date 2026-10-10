@@ -62,7 +62,9 @@ class BatchNotifications(
           // as a resource path — the same rule that keeps `resourcePath` from being an SSRF lever.
           .filter { isSafeResourcePath(it) }
       if (beneath.isNotEmpty()) {
-        paths += beneath
+        // Bounded, because each path becomes a request the client makes to the utility: without
+        // a cap, a forged notification could turn one poll into an arbitrary number of them.
+        paths += beneath.take((MAX_PATHS - paths.size).coerceAtLeast(0))
         arrived.complete(Unit)
       }
     }
@@ -85,6 +87,9 @@ class BatchNotifications(
     // The notification has beaten the 202 on every poll observed, so this is headroom for a slow
     // one — and the whole cost of a custodian that defers without ever notifying.
     val DEFAULT_WAIT = 2.seconds
+
+    // A subscription has been seen to carry up to three usage points; this is generous headroom.
+    const val MAX_PATHS = 16
   }
 }
 

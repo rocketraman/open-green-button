@@ -55,6 +55,17 @@ val BatchNotificationsTest by testSuite {
     }
   }
 
+  test("the number of paths one request can be handed is bounded") {
+    // Each path becomes a request the client makes to the utility, and /notify is unauthenticated.
+    val notifications = BatchNotifications(wait = 10.seconds)
+    notifications.expect(SUBSCRIPTION).use { expectation ->
+      repeat(3) { batch ->
+        notifications.deliver((1..10).map { "$SUBSCRIPTION/UsagePoint/m$batch$it" })
+      }
+      assert(expectation.await().size == 16) { expectation.await().toString() }
+    }
+  }
+
   test("nothing is kept once the request is over") {
     // The property that keeps the server stateless between requests: a notification for a
     // subscription nobody is polling right now goes nowhere, even for the very next request.

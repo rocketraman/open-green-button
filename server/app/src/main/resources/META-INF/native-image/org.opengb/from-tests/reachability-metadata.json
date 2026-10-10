@@ -2638,7 +2638,7 @@
       ]
     },
     {
-      "type": "org.opengb.proxy.BatchNotificationsTestKt$BatchNotificationsTest$2$6",
+      "type": "org.opengb.proxy.BatchNotificationsTestKt$BatchNotificationsTest$2$7",
       "fields": [
         {
           "name": "label"
