@@ -2338,6 +2338,12 @@
       "type": "org.opengb.TestCtx"
     },
     {
+      "type": "org.opengb.observability.LogCaptureKt"
+    },
+    {
+      "type": "org.opengb.observability.LogRedactorTestKt"
+    },
+    {
       "type": "org.opengb.onboarding.ApplicationInformationParserTestKt"
     },
     {
@@ -2583,6 +2589,9 @@
     },
     {
       "glob": "META-INF/services/java.nio.channels.spi.SelectorProvider"
+    },
+    {
+      "glob": "META-INF/services/java.time.zone.ZoneRulesProvider"
     },
     {
       "glob": "META-INF/services/javax.xml.parsers.DocumentBuilderFactory"
