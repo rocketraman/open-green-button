@@ -10,6 +10,7 @@ import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
 import io.ktor.server.plugins.BadRequestException
+import io.ktor.server.plugins.callid.callId
 import io.ktor.server.request.receive
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
@@ -22,6 +23,7 @@ import org.apache.logging.log4j.kotlin.logger
 import org.apache.logging.log4j.message.StringMapMessage
 import org.opengb.AppDeps
 import org.opengb.oauth.OAuthException
+import org.opengb.observability.LogRedactor
 import org.opengb.proxy.BlobDecryptionException
 import org.opengb.proxy.RefreshBlob
 import org.opengb.proxy.TokenCrypto
@@ -181,7 +183,7 @@ private suspend fun RoutingContext.handleProxyUsage(
   }
   val fetch = prepareFetch(deps, request) ?: return
   val resourceUri = resourceUriFor(fetch.subscriptionUri, request.resourcePath)
-  call.streamResource(usageClient, fetch.utility, resourceUri, fetch.accessToken, request)
+  call.streamResource(usageClient, deps.logRedactor, fetch, resourceUri, request)
 }
 
 /**
@@ -227,9 +229,9 @@ private suspend fun RoutingContext.handleProxyCustomer(
   // Customer data is a snapshot resource — the ESPI date-range filters don't apply, so strip them.
   call.streamResource(
     usageClient,
-    fetch.utility,
+    deps.logRedactor,
+    fetch,
     customerUri,
-    fetch.accessToken,
     request.copy(publishedMin = null, publishedMax = null, dateFilterParam = null),
   )
 }
@@ -394,11 +396,12 @@ private fun rotatedCredentials(
 @Suppress("TooGenericExceptionCaught")
 private suspend fun ApplicationCall.streamResource(
   client: UsageClient,
-  utility: UtilityProfile,
-  subscriptionUri: String,
-  accessToken: String,
+  redactor: LogRedactor,
+  fetch: RefreshedFetch,
+  resourceUri: String,
   request: ProxyUsageRequest,
 ) {
+  val utility = fetch.utility
   // TRUE zero-copy streaming: run the whole response inside the client's `execute { }` block (so the
   // upstream body channel is never buffered), and respond with a pull-based [ByteReadChannelContent].
   // The engine consumes that channel *as part of* `respond(...)`, so the copy finishes before the
@@ -410,8 +413,8 @@ private suspend fun ApplicationCall.streamResource(
     client
       .fetch(
         utility = utility,
-        subscriptionUri = subscriptionUri,
-        accessToken = accessToken,
+        subscriptionUri = resourceUri,
+        accessToken = fetch.accessToken,
         publishedMin = request.publishedMin,
         publishedMax = request.publishedMax,
         // A confirmed per-utility quirk always wins over the client's diagnostic-only
@@ -420,8 +423,8 @@ private suspend fun ApplicationCall.streamResource(
         dateFilterParam = utility.quirks.dateFilterParam ?: request.dateFilterParam,
       ).execute { upstream ->
         when {
-          upstream.status == HttpStatusCode.Accepted -> handleUpstreamAccepted(upstream)
-          upstream.status != HttpStatusCode.OK -> handleUpstreamFailure(upstream)
+          upstream.status == HttpStatusCode.Accepted -> handleUpstreamAccepted(upstream, redactor)
+          upstream.status != HttpStatusCode.OK -> handleUpstreamFailure(upstream, redactor)
           else -> {
             val upstreamContentType =
               upstream.headers[HttpHeaders.ContentType]?.let { ContentType.parse(it) } ?: ESPI_ATOM_XML
@@ -441,12 +444,15 @@ private suspend fun ApplicationCall.streamResource(
     respondError(
       HttpStatusCode.BadGateway,
       "utility_upstream_error",
-      "Resource fetch failed for $subscriptionUri: ${e.message}",
+      "Resource fetch failed for $resourceUri: ${e.message} | ${redactor.reference(callId, resourceUri)}",
     )
   }
 }
 
-private suspend fun ApplicationCall.handleUpstreamAccepted(upstream: HttpResponse) {
+private suspend fun ApplicationCall.handleUpstreamAccepted(
+  upstream: HttpResponse,
+  redactor: LogRedactor,
+) {
   // ESPI asynchronous batch delivery: the utility accepted the request but is assembling the
   // dataset out-of-band. Per spec it later POSTs an ESPI Notification (a BatchList of resource
   // URIs) to our registered NotificationURI — which we currently discard (see Notify.kt). Until
@@ -469,14 +475,16 @@ private suspend fun ApplicationCall.handleUpstreamAccepted(upstream: HttpRespons
   // Called out separately from the header dump because these are the decisive fields — worth
   // being greppable on their own rather than buried in a header blob.
   val batchLocation = upstream.headers[HttpHeaders.Location] ?: upstream.headers["Content-Location"]
+  // The LOG gets the subscription id hashed (see [LogRedactor]) — the platform retains it. The
+  // response below keeps the real URL: that goes back to the one caller whose subscription it is.
   proxyLog.info(
     StringMapMessage().apply {
-      put("espi.async_batch.request_url", upstream.call.request.url.toString())
+      put("espi.async_batch.request_url", redactor.text(upstream.call.request.url.toString()))
       put("http.response.status_code", upstream.status.value.toString())
-      put("http.response.headers", responseHeaders)
-      batchLocation?.let { put("espi.async_batch.location", it) }
+      put("http.response.headers", redactor.text(responseHeaders))
+      batchLocation?.let { put("espi.async_batch.location", redactor.text(it)) }
       upstream.headers[HttpHeaders.RetryAfter]?.let { put("http.response.retry_after", it) }
-      if (body.isNotBlank()) put("http.response.body", body)
+      if (body.isNotBlank()) put("http.response.body", redactor.text(body))
     },
   )
   respondError(
@@ -484,11 +492,15 @@ private suspend fun ApplicationCall.handleUpstreamAccepted(upstream: HttpRespons
     "utility_data_pending",
     "Utility returned 202 Accepted for ${upstream.call.request.url}: the dataset is being " +
       "prepared asynchronously and background (async batch) delivery is not yet supported | " +
-      "response-headers: [$responseHeaders] | body: $body",
+      "response-headers: [$responseHeaders] | body: $body | " +
+      redactor.reference(callId, upstream.call.request.url.toString()),
   )
 }
 
-private suspend fun ApplicationCall.handleUpstreamFailure(upstream: HttpResponse) {
+private suspend fun ApplicationCall.handleUpstreamFailure(
+  upstream: HttpResponse,
+  redactor: LogRedactor,
+) {
   val body = upstream.bodyAsText().take(MAX_UPSTREAM_ERROR_SNIPPET)
   // Forward the DC's RAW response detail — status, headers, and body — so an upstream failure is
   // diagnosable without a live reproduction. The full URL (including any date filter we appended)
@@ -508,7 +520,8 @@ private suspend fun ApplicationCall.handleUpstreamFailure(upstream: HttpResponse
     upstream.status,
     "utility_upstream_error",
     "Resource server returned ${upstream.status.value} for ${upstream.call.request.url} | " +
-      "response-headers: [$responseHeaders] | body: $body",
+      "response-headers: [$responseHeaders] | body: $body | " +
+      redactor.reference(callId, upstream.call.request.url.toString()),
   )
 }
 

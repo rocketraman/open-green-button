@@ -10,6 +10,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import org.apache.logging.log4j.kotlin.logger
 import org.apache.logging.log4j.message.StringMapMessage
+import org.opengb.observability.LogRedactor
 import org.opengb.utility.UtilityRegistry
 
 private val notifyLog = logger("opengb.notify")
@@ -19,6 +20,8 @@ private val notifyLog = logger("opengb.notify")
 // ApplicationInformation resource we must GET next. A lenient regex avoids pulling in an XML parser
 // (and its native-image reflection metadata) just to surface the URL for an operator.
 private val urlRegex = Regex("""https?://[^\s"'<>]+""")
+
+private const val APPLICATION_INFORMATION = "/ApplicationInformation"
 
 /**
  * NotificationURI endpoint that data custodians (utilities) POST to. Two kinds of notification
@@ -35,17 +38,28 @@ private val urlRegex = Regex("""https?://[^\s"'<>]+""")
  * We **accept and log every** notification (returning 200 OK) rather than 404ing unknown ids: an
  * id may be mid-onboarding and not yet present in `utilities.conf` (its OAuth credentials don't
  * exist until we fetch the ApplicationInformation from this very notification). Bouncing the
- * notification just makes the DC retry and email an error. The BatchList body carries only resource
- * URIs — no PII, no client secrets (those live in the ApplicationInformation resource we fetch with
- * an access token) — so logging it verbatim is safe.
+ * notification just makes the DC retry and email an error.
+ *
+ * WHAT is logged depends on which kind it is. A data-available BatchList names
+ * `…/Subscription/{id}/UsagePoint/{id}` — stable handles on one customer's account — so it is
+ * logged with those ids hashed (see [LogRedactor]): the body keeps its whole shape, which is what
+ * diagnosing a custodian's behaviour needs, without recording whose account it was. An onboarding
+ * notification carries no customer data and its URL has to be readable, so that one is logged
+ * verbatim. "Onboarding" means it names an ApplicationInformation resource, or it is for a
+ * utility we have no profile for — which has no OAuth credentials and therefore no customers.
  */
-fun Application.installNotify(registry: UtilityRegistry) {
+fun Application.installNotify(
+  registry: UtilityRegistry,
+  redactor: LogRedactor,
+) {
   routing {
     post("/notify/{utility}") {
       val utilityId = call.parameters["utility"].orEmpty()
       val known = registry[utilityId] != null
       val body = runCatching { call.receiveText() }.getOrDefault("")
       val resources = urlRegex.findAll(body).map { it.value }.distinct().toList()
+      val onboarding = !known || body.contains(APPLICATION_INFORMATION)
+      val loggable: (String) -> String = { if (onboarding) it else redactor.text(it) }
       val event =
         StringMapMessage().apply {
           put("utility.id", utilityId)
@@ -54,8 +68,8 @@ fun Application.installNotify(registry: UtilityRegistry) {
             put("http.request.body.mime_type", it)
           }
           call.request.contentLength()?.let { put("http.request.body.bytes", it.toString()) }
-          if (body.isNotBlank()) put("notify.body", body)
-          if (resources.isNotEmpty()) put("notify.resources", resources.joinToString(" "))
+          if (body.isNotBlank()) put("notify.body", loggable(body))
+          if (resources.isNotEmpty()) put("notify.resources", resources.joinToString(" ", transform = loggable))
         }
       notifyLog.info(event)
       call.respond(HttpStatusCode.OK)

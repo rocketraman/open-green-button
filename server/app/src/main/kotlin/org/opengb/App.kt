@@ -23,6 +23,7 @@ import org.opengb.http.UtilityHttpClients
 import org.opengb.oauth.ClaimStore
 import org.opengb.oauth.OAuthClient
 import org.opengb.oauth.StateStore
+import org.opengb.observability.LogRedactor
 import org.opengb.observability.installAccessLog
 import org.opengb.proxy.TokenCrypto
 import org.opengb.proxy.UsageClient
@@ -52,6 +53,7 @@ data class AppDeps(
   val httpClients: UtilityHttpClients,
   val oauth: OAuthClient,
   val usageClient: UsageClient,
+  val logRedactor: LogRedactor,
 )
 
 fun buildAppDeps(
@@ -68,7 +70,8 @@ fun buildAppDeps(
     if (http != null) UtilityHttpClients.singleClient(http) else UtilityHttpClients.from(config)
   val oauth = OAuthClient(httpClients)
   val usageClient = UsageClient(httpClients)
-  return AppDeps(config, crypto, registry, stateStore, claimStore, httpClients, oauth, usageClient)
+  val logRedactor = LogRedactor(config.crypto)
+  return AppDeps(config, crypto, registry, stateStore, claimStore, httpClients, oauth, usageClient, logRedactor)
 }
 
 /**
@@ -106,6 +109,7 @@ val opengbModule =
     }
     bind<OAuthClient> { singleton { OAuthClient(instance()) } }
     bind<UsageClient> { singleton { UsageClient(instance()) } }
+    bind<LogRedactor> { singleton { LogRedactor(instance<AppConfig>().crypto) } }
     bind<AppDeps> {
       singleton {
         AppDeps(
@@ -117,6 +121,7 @@ val opengbModule =
           httpClients = instance(),
           oauth = instance(),
           usageClient = instance(),
+          logRedactor = instance(),
         )
       }
     }
@@ -167,7 +172,7 @@ internal fun Application.appModule(deps: AppDeps) {
   installLanding(deps.config)
   installConnect(deps)
   installClaim(deps.claimStore, deps.registry)
-  installNotify(deps.registry)
+  installNotify(deps.registry, deps.logRedactor)
   installUtilities(deps.registry)
   installProxyUsage(deps, deps.usageClient)
 }
