@@ -139,7 +139,7 @@ class TokenCrypto(
 
 class BlobDecryptionException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
 
-private fun decodeBase64(
+internal fun decodeBase64(
   value: String,
   name: String,
 ): ByteArray =

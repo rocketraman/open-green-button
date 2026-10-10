@@ -261,6 +261,9 @@ dependencies {
   testImplementation(libs.kotlinx.coroutines.test)
   testImplementation(libs.ktor.server.test.host)
   testImplementation(libs.ktor.client.mock)
+  // Compile-time access to log4j-core for the tests that attach an appender and assert on what
+  // was actually logged (runtime already has it; see the runtimeOnly entries above).
+  testImplementation(libs.log4j.core)
 
   // Add ktlint's rules to detekt. The wrapped rules read settings (indentSize, max line
   // length, etc.) from .editorconfig like standalone ktlint does — detekt.yml `formatting:`

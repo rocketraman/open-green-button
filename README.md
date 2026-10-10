@@ -53,6 +53,10 @@ The **Home Assistant custom integration** lives in its own repository so HACS va
 
 The hosted server holds **no per-user durable state**. Per-utility OAuth client credentials are configured globally; every other piece of state (your refresh token, your usage data) lives only on your Home Assistant instance.
 
+The server does write short-lived operational logs, which the hosting platform retains for a few days.
+They record that a request happened, for which utility, and how the utility answered — never your usage data or tokens.
+Identifiers that belong to you are not stored as-is: your utility subscription and meter ids are logged only as a keyed hash, your IP address only as its network (the last part zeroed), and the query string of a request not at all.
+
 ## Community
 
 Discuss the add-on, ask questions, and share feedback on the Home Assistant community forum:

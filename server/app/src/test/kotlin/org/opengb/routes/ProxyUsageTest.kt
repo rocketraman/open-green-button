@@ -32,6 +32,7 @@ import org.opengb.config.CryptoConfig
 import org.opengb.config.LandingConfig
 import org.opengb.config.ServerConfig
 import org.opengb.config.StateConfig
+import org.opengb.observability.captureLogs
 import org.opengb.proxy.RefreshBlob
 import org.opengb.proxy.TokenCrypto
 import org.opengb.utility.DateFilterFormat
@@ -234,6 +235,25 @@ val ProxyUsageTest by testSuite {
       assert(resp.status == HttpStatusCode.Accepted) { resp.bodyAsText() }
       assert(resp.bodyAsText().contains("utility_data_pending")) { resp.bodyAsText() }
     }
+  }
+
+  test("a 202 is logged with the subscription id hashed, while the caller still gets the real URL") {
+    // Same URL, two audiences: the response goes back to the one caller whose subscription it is;
+    // the log line is retained by the platform.
+    var responseBody = ""
+    val events =
+      captureLogs("opengb.proxy") {
+        runProxyUsage(resourceStatus = HttpStatusCode.Accepted) { client, ctx ->
+          responseBody = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob).bodyAsText()
+        }
+      }
+    assert(responseBody.contains("/Batch/Subscription/42")) { responseBody }
+    val logged = events.mapNotNull { it["espi.async_batch.request_url"] }
+    assert(logged.isNotEmpty()) { events.toString() }
+    assert(logged.all { Regex("/Batch/Subscription/h-[0-9a-f]{12}$").containsMatchIn(it) }) { logged.toString() }
+    // The reporter only ever sees the response, so it has to say how the log names this request.
+    assert(logged.any { responseBody.contains("logged-as: $it") }) { responseBody }
+    assert(Regex("request-id: [0-9a-f-]{36}").containsMatchIn(responseBody)) { responseBody }
   }
 
   test("202 forwards the custodian's headers and body so the async batch is diagnosable") {
