@@ -25,6 +25,7 @@ import org.opengb.oauth.OAuthClient
 import org.opengb.oauth.StateStore
 import org.opengb.observability.LogRedactor
 import org.opengb.observability.installAccessLog
+import org.opengb.proxy.BatchNotifications
 import org.opengb.proxy.TokenCrypto
 import org.opengb.proxy.UsageClient
 import org.opengb.routes.installCanonicalHost
@@ -54,11 +55,13 @@ data class AppDeps(
   val oauth: OAuthClient,
   val usageClient: UsageClient,
   val logRedactor: LogRedactor,
+  val batchNotifications: BatchNotifications,
 )
 
 fun buildAppDeps(
   config: AppConfig,
   http: HttpClient? = null,
+  batchNotifications: BatchNotifications = BatchNotifications(),
 ): AppDeps {
   val crypto = TokenCrypto(config.crypto)
   val registry = UtilityRegistry(config.utilities)
@@ -70,8 +73,18 @@ fun buildAppDeps(
     if (http != null) UtilityHttpClients.singleClient(http) else UtilityHttpClients.from(config)
   val oauth = OAuthClient(httpClients)
   val usageClient = UsageClient(httpClients)
-  val logRedactor = LogRedactor(config.crypto)
-  return AppDeps(config, crypto, registry, stateStore, claimStore, httpClients, oauth, usageClient, logRedactor)
+  return AppDeps(
+    config,
+    crypto,
+    registry,
+    stateStore,
+    claimStore,
+    httpClients,
+    oauth,
+    usageClient,
+    LogRedactor(config.crypto),
+    batchNotifications,
+  )
 }
 
 /**
@@ -109,6 +122,7 @@ val opengbModule =
     }
     bind<OAuthClient> { singleton { OAuthClient(instance()) } }
     bind<UsageClient> { singleton { UsageClient(instance()) } }
+    bind<BatchNotifications> { singleton { BatchNotifications() } }
     bind<LogRedactor> { singleton { LogRedactor(instance<AppConfig>().crypto) } }
     bind<AppDeps> {
       singleton {
@@ -122,6 +136,7 @@ val opengbModule =
           oauth = instance(),
           usageClient = instance(),
           logRedactor = instance(),
+          batchNotifications = instance(),
         )
       }
     }
@@ -172,7 +187,7 @@ internal fun Application.appModule(deps: AppDeps) {
   installLanding(deps.config)
   installConnect(deps)
   installClaim(deps.claimStore, deps.registry)
-  installNotify(deps.registry, deps.logRedactor)
+  installNotify(deps.registry, deps.logRedactor, deps.batchNotifications)
   installUtilities(deps.registry)
   installProxyUsage(deps, deps.usageClient)
 }

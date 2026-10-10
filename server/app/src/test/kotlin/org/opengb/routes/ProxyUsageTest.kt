@@ -33,6 +33,7 @@ import org.opengb.config.LandingConfig
 import org.opengb.config.ServerConfig
 import org.opengb.config.StateConfig
 import org.opengb.observability.captureLogs
+import org.opengb.proxy.BatchNotifications
 import org.opengb.proxy.RefreshBlob
 import org.opengb.proxy.TokenCrypto
 import org.opengb.utility.DateFilterFormat
@@ -41,6 +42,7 @@ import org.opengb.utility.TokenAuthStyle
 import org.opengb.utility.UtilityProfile
 import org.opengb.utility.UtilityQuirks
 import java.util.Base64
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
 /**
@@ -254,6 +256,70 @@ val ProxyUsageTest by testSuite {
     // The reporter only ever sees the response, so it has to say how the log names this request.
     assert(logged.any { responseBody.contains("logged-as: $it") }) { responseBody }
     assert(Regex("request-id: [0-9a-f-]{36}").containsMatchIn(responseBody)) { responseBody }
+  }
+
+  test("a 202 names the resources the custodian notified while it was answering") {
+    // The whole fix for a first sync against an async-batch custodian: its usage-point ids exist
+    // nowhere but this notification, and it arrives before the 202 does.
+    runProxyUsage(
+      resourceStatus = HttpStatusCode.Accepted,
+      notifyDuringFetch =
+        batchList(
+          "$SUBSCRIPTION_URI/UsagePoint/$USAGE_POINT_A",
+          "$SUBSCRIPTION_URI/UsagePoint/$USAGE_POINT_B",
+        ),
+    ) { client, ctx ->
+      val resp = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob)
+      assert(resp.status == HttpStatusCode.Accepted) { resp.bodyAsText() }
+      val body = testJson.decodeFromString<ErrorBody>(resp.bodyAsText())
+      assert(body.error == "utility_data_pending") { body.toString() }
+      assert(body.resourcePaths == listOf("UsagePoint/$USAGE_POINT_A", "UsagePoint/$USAGE_POINT_B")) {
+        body.toString()
+      }
+    }
+  }
+
+  test("a 202 with no notification carries no resource paths") {
+    runProxyUsage(resourceStatus = HttpStatusCode.Accepted) { client, ctx ->
+      val resp = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob)
+      assert(resp.status == HttpStatusCode.Accepted) { resp.bodyAsText() }
+      assert(!resp.bodyAsText().contains("resourcePaths")) { resp.bodyAsText() }
+    }
+  }
+
+  test("a notification only yields paths that are beneath this subscription and safe to fetch") {
+    // /notify is unauthenticated, and whatever comes back here the client will ask the proxy to
+    // fetch with the user's token. Another subscription's resource, a traversal and a query
+    // string must all be dropped; the one legitimate path survives.
+    runProxyUsage(
+      resourceStatus = HttpStatusCode.Accepted,
+      notifyDuringFetch =
+        batchList(
+          "https://utility.mock/espi/1_1/resource/Batch/Subscription/99/UsagePoint/$USAGE_POINT_A",
+          "$SUBSCRIPTION_URI/../99/UsagePoint/$USAGE_POINT_A",
+          "$SUBSCRIPTION_URI/UsagePoint/$USAGE_POINT_A?published-min=2020-01-01",
+          "$SUBSCRIPTION_URI/UsagePoint/$USAGE_POINT_B",
+        ),
+    ) { client, ctx ->
+      val body =
+        testJson.decodeFromString<ErrorBody>(
+          client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob).bodyAsText(),
+        )
+      assert(body.resourcePaths == listOf("UsagePoint/$USAGE_POINT_B")) { body.toString() }
+    }
+  }
+
+  test("a resourcePath fetch does not wait for a notification") {
+    // Only the subscription-level batch URL is an enqueue endpoint. A per-UsagePoint fetch that
+    // came back 202 has nothing to be told, so it must not pick up paths either.
+    runProxyUsage(
+      resourceStatus = HttpStatusCode.Accepted,
+      notifyDuringFetch = batchList("$SUBSCRIPTION_URI/UsagePoint/$USAGE_POINT_A"),
+    ) { client, ctx ->
+      val resp = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob, resourcePath = "UsagePoint/$USAGE_POINT_A")
+      assert(resp.status == HttpStatusCode.Accepted) { resp.bodyAsText() }
+      assert(!resp.bodyAsText().contains("resourcePaths")) { resp.bodyAsText() }
+    }
   }
 
   test("202 forwards the custodian's headers and body so the async batch is diagnosable") {
@@ -592,9 +658,13 @@ private fun runProxyUsage(
   // for the 202 path, where the proxy's whole job is to surface what the custodian said.
   resourceErrorBody: String = "utility resource server down",
   resourceResponseHeaders: Headers = Headers.Empty,
+  // A notification body the "custodian" POSTs to /notify/mock WHILE it is still answering the
+  // resource GET — the order a real async-batch custodian does it in.
+  notifyDuringFetch: String? = null,
   block: suspend (io.ktor.client.HttpClient, ProxyUsageCtx) -> Unit,
 ) {
-  val subscriptionUri = "https://utility.mock/espi/1_1/resource/Batch/Subscription/42"
+  var appClient: HttpClient? = null
+  val subscriptionUri = SUBSCRIPTION_URI
   val utility =
     UtilityProfile(
       id = "mock",
@@ -618,6 +688,9 @@ private fun runProxyUsage(
     HttpClient(MockEngine) {
       engine {
         addHandler { request ->
+          if (notifyDuringFetch != null && request.url.encodedPath.contains("/Batch/Subscription/")) {
+            checkNotNull(appClient).post("/notify/mock") { setBody(notifyDuringFetch) }
+          }
           handleMockRequest(
             request,
             tokenEndpointStatus,
@@ -647,7 +720,9 @@ private fun runProxyUsage(
       landing = LandingConfig(),
       utilities = listOf(utility),
     )
-  val deps = buildAppDeps(config, mockHttp)
+  // A short wait: most 202 tests send no notification, and each would otherwise sit out the
+  // production timeout.
+  val deps = buildAppDeps(config, mockHttp, BatchNotifications(wait = 100.milliseconds))
   val crypto = TokenCrypto(config.crypto)
   val refreshBlob =
     RefreshBlob(
@@ -669,7 +744,10 @@ private fun runProxyUsage(
   runBlocking {
     testApplication {
       application { appModule(deps) }
-      client.use { block(it, ctx) }
+      client.use {
+        appClient = it
+        block(it, ctx)
+      }
     }
   }
 }
@@ -711,6 +789,20 @@ private fun MockRequestHandleScope.handleMockRequest(
   }
   else -> respondError(HttpStatusCode.NotImplemented)
 }
+
+private const val SUBSCRIPTION_URI = "https://utility.mock/espi/1_1/resource/Batch/Subscription/42"
+private const val USAGE_POINT_A = "0c52a218-006d-5530-a6ba-52c92a8df987"
+private const val USAGE_POINT_B = "7974452e-4a02-51e8-9c73-cb6b8d0d8c9d"
+
+// An ESPI data-available notification in the shape savagedata sends it.
+private fun batchList(vararg resources: String): String =
+  resources.joinToString(
+    separator = "",
+    prefix =
+      """<feed xmlns="http://www.w3.org/2005/Atom"><entry><content>""" +
+        """<espi:BatchList xmlns:espi="http://naesb.org/espi">""",
+    postfix = "</espi:BatchList></content></entry></feed>",
+  ) { "<espi:resources>$it</espi:resources>" }
 
 // A tiny representative ESPI feed. The proxy never inspects it — these tests only assert
 // the wire goes through verbatim — so it doesn't need to be schema-perfect, only deterministic

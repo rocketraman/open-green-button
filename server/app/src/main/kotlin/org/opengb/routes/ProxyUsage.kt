@@ -24,10 +24,12 @@ import org.apache.logging.log4j.message.StringMapMessage
 import org.opengb.AppDeps
 import org.opengb.oauth.OAuthException
 import org.opengb.observability.LogRedactor
+import org.opengb.proxy.BatchNotifications
 import org.opengb.proxy.BlobDecryptionException
 import org.opengb.proxy.RefreshBlob
 import org.opengb.proxy.TokenCrypto
 import org.opengb.proxy.UsageClient
+import org.opengb.proxy.isSafeResourcePath
 import org.opengb.utility.RefreshScope
 import org.opengb.utility.UnknownUtilityException
 import org.opengb.utility.UtilityProfile
@@ -96,7 +98,7 @@ data class ProxyUsageRequest(
    * whatever it fetches, so accepting a caller-supplied absolute URL would make this endpoint an
    * authenticated SSRF gadget. Constraining it to a relative path under the subscription URI —
    * which comes from the encrypted blob, never from the request body — means a caller can only
-   * ever reach resources inside its own authorization. See [RESOURCE_PATH_REGEX].
+   * ever reach resources inside its own authorization. See [isSafeResourcePath].
    */
   val resourcePath: String? = null,
 )
@@ -173,7 +175,7 @@ private suspend fun RoutingContext.handleProxyUsage(
   // Validated BEFORE prepareFetch: that call refreshes the utility access token, and for a
   // custodian issuing one-time refresh tokens (savagedata/OpenIddict) the refresh BURNS the
   // client's stored token. A malformed request must not cost the caller its credentials.
-  if (!isSafeResourcePath(request.resourcePath)) {
+  if (request.resourcePath?.let(::isSafeResourcePath) == false) {
     return call.respondError(
       HttpStatusCode.BadRequest,
       "invalid_resource_path",
@@ -183,24 +185,8 @@ private suspend fun RoutingContext.handleProxyUsage(
   }
   val fetch = prepareFetch(deps, request) ?: return
   val resourceUri = resourceUriFor(fetch.subscriptionUri, request.resourcePath)
-  call.streamResource(usageClient, deps.logRedactor, fetch, resourceUri, request)
+  call.streamResource(usageClient, deps, fetch, resourceUri, request)
 }
-
-/**
- * Short, ESPI-shaped path segments only — letters, digits and hyphens, e.g. `UsagePoint` and
- * `UsagePoint/1c8dc9de-1c8f-5b47-9a35-4c98e6bd1ce1`.
- *
- * The rejections are the point: no scheme or authority (`:` and `//` are unmatched), no traversal
- * (`.` is unmatched, so `..` cannot appear), no absolute path (a leading `/` is unmatched), no
- * query or fragment (`?` and `#` are unmatched), and no percent-encoding (`%` is unmatched, so
- * `%2e%2e` can't smuggle traversal past this and get decoded downstream). Segment counts and
- * lengths are bounded so a caller can't build an unreasonable URL out of legal characters.
- */
-private val RESOURCE_PATH_REGEX =
-  Regex("""[A-Za-z][A-Za-z0-9]{0,31}(?:/[A-Za-z0-9][A-Za-z0-9-]{0,63}){0,3}""")
-
-private fun isSafeResourcePath(resourcePath: String?): Boolean =
-  resourcePath == null || RESOURCE_PATH_REGEX.matches(resourcePath)
 
 /** The subscription URI itself, or the validated suffix joined beneath it. */
 private fun resourceUriFor(
@@ -229,7 +215,7 @@ private suspend fun RoutingContext.handleProxyCustomer(
   // Customer data is a snapshot resource — the ESPI date-range filters don't apply, so strip them.
   call.streamResource(
     usageClient,
-    deps.logRedactor,
+    deps,
     fetch,
     customerUri,
     request.copy(publishedMin = null, publishedMax = null, dateFilterParam = null),
@@ -396,12 +382,18 @@ private fun rotatedCredentials(
 @Suppress("TooGenericExceptionCaught")
 private suspend fun ApplicationCall.streamResource(
   client: UsageClient,
-  redactor: LogRedactor,
+  deps: AppDeps,
   fetch: RefreshedFetch,
   resourceUri: String,
   request: ProxyUsageRequest,
 ) {
   val utility = fetch.utility
+  val redactor = deps.logRedactor
+  // Only the subscription-level batch URL is the enqueue endpoint an async custodian notifies
+  // about. Registered BEFORE the upstream call because the notification arrives while that call
+  // is still in flight — see [BatchNotifications].
+  val expectation =
+    if (resourceUri == fetch.subscriptionUri) deps.batchNotifications.expect(resourceUri) else null
   // TRUE zero-copy streaming: run the whole response inside the client's `execute { }` block (so the
   // upstream body channel is never buffered), and respond with a pull-based [ByteReadChannelContent].
   // The engine consumes that channel *as part of* `respond(...)`, so the copy finishes before the
@@ -423,7 +415,7 @@ private suspend fun ApplicationCall.streamResource(
         dateFilterParam = utility.quirks.dateFilterParam ?: request.dateFilterParam,
       ).execute { upstream ->
         when {
-          upstream.status == HttpStatusCode.Accepted -> handleUpstreamAccepted(upstream, redactor)
+          upstream.status == HttpStatusCode.Accepted -> handleUpstreamAccepted(upstream, redactor, expectation)
           upstream.status != HttpStatusCode.OK -> handleUpstreamFailure(upstream, redactor)
           else -> {
             val upstreamContentType =
@@ -446,40 +438,40 @@ private suspend fun ApplicationCall.streamResource(
       "utility_upstream_error",
       "Resource fetch failed for $resourceUri: ${e.message} | ${redactor.reference(callId, resourceUri)}",
     )
+  } finally {
+    expectation?.close()
   }
 }
 
 private suspend fun ApplicationCall.handleUpstreamAccepted(
   upstream: HttpResponse,
   redactor: LogRedactor,
+  expectation: BatchNotifications.Expectation?,
 ) {
-  // ESPI asynchronous batch delivery: the utility accepted the request but is assembling the
-  // dataset out-of-band. Per spec it later POSTs an ESPI Notification (a BatchList of resource
-  // URIs) to our registered NotificationURI — which we currently discard (see Notify.kt). Until
-  // that retrieval flow exists, surface a DISTINCT, machine-readable signal — passing the
-  // utility's 202 semantics through with a dedicated `utility_data_pending` error key — so the HA
-  // client can guide the user instead of looping on a generic upstream error.
+  // ESPI asynchronous batch delivery: the utility accepted the request but assembles the dataset
+  // out-of-band, then POSTs an ESPI Notification (a BatchList of resource URIs) to our
+  // NotificationURI saying where it put it. The 202 itself says nothing — on Savage Data it has
+  // never carried a Location, a Retry-After or a body — and re-asking the same URL only enqueues
+  // again. So the answer we pass on is the one from the notification: the resources the custodian
+  // prepared, as paths the client can hand straight back in `resourcePath`.
   //
-  // Capture the WHOLE response, exactly as [handleUpstreamFailure] does for an error. A 202 body
-  // is a status document, not a feed, so reading it costs nothing and there is nothing to stream.
-  // This is the only window we have onto what a live async custodian actually says: it is not
-  // reproducible without a real authorization at a custodian that defers, and Alectra (the one
-  // confirmed case, github.com/rocketraman/open-green-button-homeassistant/issues/10) is
-  // production-only. Whether the 202 names the prepared batch's URL decides the whole fix: if it
-  // does, the client can hand that URL back on the next poll and we never need to correlate an
-  // out-of-band notification to a subscription — the proxy stays stateless. If it doesn't,
-  // consuming the BatchList (and giving the proxy real storage) is the only way through.
+  // Still a 202 with the dedicated `utility_data_pending` key: nothing has been fetched yet, and a
+  // custodian that defers WITHOUT notifying (or whose notification missed this machine) yields the
+  // same response minus the paths, which the client already treats as "try again later".
+  val prepared = expectation?.await().orEmpty()
+  // The response detail is kept in full, exactly as [handleUpstreamFailure] does for an error: a
+  // 202 body is a status document, not a feed, so reading it costs nothing, and what a live async
+  // custodian says is not reproducible without a real authorization at one.
   val body = upstream.bodyAsText().take(MAX_UPSTREAM_ERROR_SNIPPET)
   val responseHeaders =
     upstream.headers.entries().joinToString(", ") { (name, values) -> "$name: ${values.joinToString(",")}" }
-  // Called out separately from the header dump because these are the decisive fields — worth
-  // being greppable on their own rather than buried in a header blob.
   val batchLocation = upstream.headers[HttpHeaders.Location] ?: upstream.headers["Content-Location"]
   // The LOG gets the subscription id hashed (see [LogRedactor]) — the platform retains it. The
   // response below keeps the real URL: that goes back to the one caller whose subscription it is.
   proxyLog.info(
     StringMapMessage().apply {
       put("espi.async_batch.request_url", redactor.text(upstream.call.request.url.toString()))
+      put("espi.async_batch.notified_resources", prepared.size.toString())
       put("http.response.status_code", upstream.status.value.toString())
       put("http.response.headers", redactor.text(responseHeaders))
       batchLocation?.let { put("espi.async_batch.location", redactor.text(it)) }
@@ -487,13 +479,22 @@ private suspend fun ApplicationCall.handleUpstreamAccepted(
       if (body.isNotBlank()) put("http.response.body", redactor.text(body))
     },
   )
-  respondError(
+  val outcome =
+    if (prepared.isEmpty()) {
+      "the dataset is being prepared asynchronously and the utility has not said where to collect it"
+    } else {
+      "the dataset was prepared asynchronously as ${prepared.size} resource(s), listed in `resourcePaths`"
+    }
+  respond(
     HttpStatusCode.Accepted,
-    "utility_data_pending",
-    "Utility returned 202 Accepted for ${upstream.call.request.url}: the dataset is being " +
-      "prepared asynchronously and background (async batch) delivery is not yet supported | " +
-      "response-headers: [$responseHeaders] | body: $body | " +
-      redactor.reference(callId, upstream.call.request.url.toString()),
+    ErrorBody(
+      error = "utility_data_pending",
+      message =
+        "Utility returned 202 Accepted for ${upstream.call.request.url}: $outcome | " +
+          "response-headers: [$responseHeaders] | body: $body | " +
+          redactor.reference(callId, upstream.call.request.url.toString()),
+      resourcePaths = prepared.ifEmpty { null },
+    ),
   )
 }
 

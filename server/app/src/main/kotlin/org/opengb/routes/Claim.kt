@@ -69,7 +69,16 @@ data class ClaimResponse(
 )
 
 @Serializable
-data class ErrorBody(val error: String, val message: String? = null)
+data class ErrorBody(
+  val error: String,
+  val message: String? = null,
+  /**
+   * Only on a `utility_data_pending` (202) from `/proxy/usage`: the resources the utility prepared
+   * the deferred dataset as, relative to the subscription (e.g. `UsagePoint/{id}`). Each is a
+   * valid `resourcePath` for a follow-up `/proxy/usage` call. Absent when the utility named none.
+   */
+  val resourcePaths: List<String>? = null,
+)
 
 /**
  * Stripe-style API version. Clients send `OpenGB-Api-Version: <date>` and the server's request

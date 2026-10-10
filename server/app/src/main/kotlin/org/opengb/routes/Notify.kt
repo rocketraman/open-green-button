@@ -11,6 +11,7 @@ import io.ktor.server.routing.routing
 import org.apache.logging.log4j.kotlin.logger
 import org.apache.logging.log4j.message.StringMapMessage
 import org.opengb.observability.LogRedactor
+import org.opengb.proxy.BatchNotifications
 import org.opengb.utility.UtilityRegistry
 
 private val notifyLog = logger("opengb.notify")
@@ -32,8 +33,10 @@ private const val APPLICATION_INFORMATION = "/ApplicationInformation"
  *    we must then GET (see the milton_hydro / savagedata onboarding). We capture the body so the
  *    App Info URL can be recovered from logs — the server is stateless and Fly scales to zero, so
  *    there is no in-memory place to stash it.
- *  - **Data-available notifications** for an existing subscription — discarded in v1 (the Home
- *    Assistant client polls on its own cadence rather than reacting to notifications).
+ *  - **Data-available notifications** for an existing subscription. Never stored: the Home
+ *    Assistant client polls on its own cadence rather than reacting to notifications. The one
+ *    use made of them is handing the named resources to a `/proxy/usage` request that is in
+ *    flight for that subscription at that moment — see [BatchNotifications].
  *
  * We **accept and log every** notification (returning 200 OK) rather than 404ing unknown ids: an
  * id may be mid-onboarding and not yet present in `utilities.conf` (its OAuth credentials don't
@@ -51,6 +54,7 @@ private const val APPLICATION_INFORMATION = "/ApplicationInformation"
 fun Application.installNotify(
   registry: UtilityRegistry,
   redactor: LogRedactor,
+  batchNotifications: BatchNotifications,
 ) {
   routing {
     post("/notify/{utility}") {
@@ -72,6 +76,8 @@ fun Application.installNotify(
           if (resources.isNotEmpty()) put("notify.resources", resources.joinToString(" ", transform = loggable))
         }
       notifyLog.info(event)
+      // A request that is mid-poll on one of these subscriptions is waiting to hear this.
+      batchNotifications.deliver(resources)
       call.respond(HttpStatusCode.OK)
     }
   }
