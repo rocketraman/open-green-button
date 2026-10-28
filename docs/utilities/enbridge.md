@@ -66,7 +66,8 @@ Readings are gas volume in m³ (`uom` 42), one per billing period (roughly month
 
 ## Information on File
 
-Registration created by Raman Gupta (@rocketraman) using his own contact information.
+Registration created by Nadim Khimani, updated by Raman Gupta (@rocketraman) to correct utility
+slugs, using opengreenbutton@googlegroups.com.
 
 ## mTLS Status
 
