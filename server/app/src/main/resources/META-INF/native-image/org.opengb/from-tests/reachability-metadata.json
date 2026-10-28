@@ -2956,6 +2956,9 @@
             "java.lang.String",
             "org.opengb.utility.DateFilterFormat",
             "boolean",
+            "boolean",
+            "boolean",
+            "boolean",
             "int",
             "kotlin.jvm.internal.DefaultConstructorMarker"
           ]
