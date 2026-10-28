@@ -36,6 +36,8 @@ import org.opengb.observability.captureLogs
 import org.opengb.proxy.BatchNotifications
 import org.opengb.proxy.RefreshBlob
 import org.opengb.proxy.TokenCrypto
+import org.opengb.utility.CLIENT_QUIRK_INVERT_COST_IF_POSITIVE_MULTIPLIER
+import org.opengb.utility.CLIENT_QUIRK_INVERT_USAGE_IF_POSITIVE_MULTIPLIER
 import org.opengb.utility.DateFilterFormat
 import org.opengb.utility.RefreshScope
 import org.opengb.utility.TokenAuthStyle
@@ -71,6 +73,25 @@ val ProxyUsageTest by testSuite {
       }
       assert(resp.headers[HEADER_NEW_ENCRYPTED_REFRESH_BLOB] == null)
       assert(resp.headers[HEADER_NEW_PROXY_TOKEN] == null)
+    }
+  }
+
+  test("no OpenGB-Quirks header for a utility without client quirks") {
+    runProxyUsage { client, ctx ->
+      val resp = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob)
+      assert(resp.status == HttpStatusCode.OK) { resp.bodyAsText() }
+      assert(resp.headers[HEADER_QUIRKS] == null) { resp.headers[HEADER_QUIRKS].toString() }
+    }
+  }
+
+  test("client quirks reach the client as comma-separated OpenGB-Quirks tokens") {
+    val quirks = UtilityQuirks(invertUsageIfPositiveMultiplier = true, invertCostIfPositiveMultiplier = true)
+    runProxyUsage(quirks = quirks) { client, ctx ->
+      val resp = client.postProxyUsage(ctx.proxyToken, ctx.encryptedBlob)
+      assert(resp.status == HttpStatusCode.OK) { resp.bodyAsText() }
+      val expected =
+        "$CLIENT_QUIRK_INVERT_USAGE_IF_POSITIVE_MULTIPLIER,$CLIENT_QUIRK_INVERT_COST_IF_POSITIVE_MULTIPLIER"
+      assert(resp.headers[HEADER_QUIRKS] == expected) { resp.headers[HEADER_QUIRKS].toString() }
     }
   }
 

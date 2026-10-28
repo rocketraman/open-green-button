@@ -24,6 +24,25 @@ val UtilityQuirksConfigTest by testSuite {
     assert(!quirks.sendsPublishedMax)
   }
 
+  test("the multiplier quirks default off and each adds only its own client quirk") {
+    assert(loadHocon<QuirksHolder>("{}").quirks.clientQuirks.isEmpty())
+    val usage = loadHocon<QuirksHolder>("quirks: { invertUsageIfPositiveMultiplier: true }").quirks
+    assert(
+      usage.clientQuirks == listOf(CLIENT_QUIRK_INVERT_USAGE_IF_POSITIVE_MULTIPLIER),
+    ) { "got ${usage.clientQuirks}" }
+    val cost = loadHocon<QuirksHolder>("quirks: { invertCostIfPositiveMultiplier: true }").quirks
+    assert(cost.clientQuirks == listOf(CLIENT_QUIRK_INVERT_COST_IF_POSITIVE_MULTIPLIER)) { "got ${cost.clientQuirks}" }
+  }
+
+  test("the packaged utilities.conf inverts usage and cost multipliers for Enbridge only") {
+    val utilities = ConfigFactory.parseResources("utilities.conf").getConfigList("utilities")
+    for (key in listOf("invertUsageIfPositiveMultiplier", "invertCostIfPositiveMultiplier")) {
+      val path = "quirks.$key"
+      val on = utilities.filter { it.hasPath(path) && it.getBoolean(path) }.map { it.getString("id") }
+      assert(on == listOf("enbridge")) { "$key: $on" }
+    }
+  }
+
   // The packaged utilities.conf is never decoded in tests — its clientId/clientSecret come from
   // `${?OPENGB_UTILITY_*}` env vars that don't exist here, so a full Hoplite load can't succeed.
   // Parse it as raw HOCON instead (no resolve, so the substitutions stay untouched) and assert the

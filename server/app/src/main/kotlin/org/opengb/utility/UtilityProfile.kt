@@ -181,7 +181,44 @@ data class UtilityQuirks(
    * the window to "everything published since `-min`" — which is what an incremental poll wants.
    */
   val sendsPublishedMax: Boolean = true,
-)
+  /**
+   * The custodian sends the ReadingType `powerOfTenMultiplier` with the wrong sign: the raw
+   * reading is scaled UP by 10^n, so the real quantity is value ÷ 10^n rather than the spec's
+   * value × 10^n. Enbridge Gas reports a 538 m³ month as `538000` at multiplier `3`.
+   *
+   * A positive multiplier is read as negative; zero and negative ones are left alone. So this
+   * keeps reading the feed right if the custodian fixes it (sending `-3`) before the quirk is
+   * switched off — a window in which a plain sign flip would break it. The cost of that: a
+   * custodian with this quirk can't also send a genuinely positive multiplier, and none does.
+   *
+   * The proxy never parses ESPI, so this does nothing here. Like every client quirk (see
+   * [clientQuirks]) it's forwarded to the Home Assistant client as an `OpenGB-Quirks` token on
+   * every `/proxy/usage` response, and the client applies it as it parses. It lives here rather
+   * than in the client so it can be switched off without waiting on users to update.
+   */
+  val invertUsageIfPositiveMultiplier: Boolean = false,
+  /**
+   * [invertUsageIfPositiveMultiplier] for the UsageSummary cost line items instead: each line's
+   * `<measurement><powerOfTenMultiplier>` is read as negative when positive. Enbridge Gas reports
+   * a $35.03 bill as `35030` at `3`. Separate because a custodian can get one right and not the
+   * other.
+   */
+  val invertCostIfPositiveMultiplier: Boolean = false,
+) {
+  /** Quirks the HA client has to apply itself (it parses the ESPI), as `OpenGB-Quirks` tokens. */
+  val clientQuirks: List<String>
+    get() =
+      listOfNotNull(
+        CLIENT_QUIRK_INVERT_USAGE_IF_POSITIVE_MULTIPLIER.takeIf { invertUsageIfPositiveMultiplier },
+        CLIENT_QUIRK_INVERT_COST_IF_POSITIVE_MULTIPLIER.takeIf { invertCostIfPositiveMultiplier },
+      )
+}
+
+/** `OpenGB-Quirks` token for [UtilityQuirks.invertUsageIfPositiveMultiplier]. */
+const val CLIENT_QUIRK_INVERT_USAGE_IF_POSITIVE_MULTIPLIER: String = "invertUsageIfPositiveMultiplier"
+
+/** `OpenGB-Quirks` token for [UtilityQuirks.invertCostIfPositiveMultiplier]. */
+const val CLIENT_QUIRK_INVERT_COST_IF_POSITIVE_MULTIPLIER: String = "invertCostIfPositiveMultiplier"
 
 /** Wire format for ESPI date-filter values. See [UtilityQuirks.dateFilterFormat]. */
 enum class DateFilterFormat {

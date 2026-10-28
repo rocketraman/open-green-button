@@ -53,6 +53,10 @@ import kotlin.time.Instant
  *
  * The HA client checks for these on every successful response and updates its config entry
  * when present.
+ *
+ * Per-utility parsing quirks the client must apply (see [UtilityQuirks.clientQuirks]) go out as a
+ * comma-separated `OpenGB-Quirks` header on every response, so the server stays the one place
+ * they're switched on and off.
  */
 private val proxyLog = logger("opengb.proxy")
 
@@ -105,6 +109,7 @@ data class ProxyUsageRequest(
 
 const val HEADER_NEW_ENCRYPTED_REFRESH_BLOB: String = "OpenGB-New-Encrypted-Refresh-Blob"
 const val HEADER_NEW_PROXY_TOKEN: String = "OpenGB-New-Proxy-Token"
+const val HEADER_QUIRKS: String = "OpenGB-Quirks"
 
 /** The utility + access token to fetch a resource with, plus the ESPI resource pointers other
  *  resources (e.g. customer data) are located from. Produced by [prepareFetch]. */
@@ -184,6 +189,10 @@ private suspend fun RoutingContext.handleProxyUsage(
     )
   }
   val fetch = prepareFetch(deps, request) ?: return
+  // Set before streaming starts, so it commits with whatever response follows.
+  fetch.utility.quirks.clientQuirks
+    .takeIf { it.isNotEmpty() }
+    ?.let { call.response.header(HEADER_QUIRKS, it.joinToString(",")) }
   val resourceUri = resourceUriFor(fetch.subscriptionUri, request.resourcePath)
   call.streamResource(usageClient, deps, fetch, resourceUri, request)
 }
