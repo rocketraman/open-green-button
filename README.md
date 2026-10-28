@@ -16,6 +16,7 @@ The following utilities are available to use now:
 * Elexicon Energy (Ontario, Canada), thank you Muhammad Aziz ([@rabbitholelabsinc](https://github.com/rabbitholelabsinc)).
 * Elk Energy (Ontario, Canada).
 * El Paso Electric (New Mexico / Texas, USA).
+* Enbridge Gas (Ontario, Canada).
 * Enova (Ontario, Canada), thank you Kate Kennedy ([@kennek6](https://github.com/kennek6)).
 * Enwin (Ontario, Canada).
 * Eversource (Massachusetts, USA), thank you Devin Kelly ([@dwwkelly](https://github.com/dwwkelly)).

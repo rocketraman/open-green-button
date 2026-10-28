@@ -37,9 +37,36 @@ The utility slug is `enbridge`. The `redirect_uri` was originally submitted as t
 Okta only issues a refresh token when the scope includes `offline_access`, so it is appended
 (space-separated) to the ESPI scope string.
 
+Live as of 2026-10-28: Enbridge approved the registration (`dataCustodianApplicationStatus = 2`),
+and a real customer authorization completed end to end.
+
+## Feed Quirks
+
+Every `powerOfTenMultiplier` in the feed has the wrong sign. ESPI's real quantity is
+value × 10^multiplier; Enbridge scales the raw value *up* instead, so a 538 m³ month arrives as
+`538000` at multiplier `3`, and a $35.03 bill as `35030` at `3`. Read per spec, usage and cost come
+out a million times too large.
+
+`utilities.conf` sets two client quirks for Enbridge, forwarded to the Home Assistant integration
+in the `OpenGB-Quirks` header:
+
+* `invertUsageIfPositiveMultiplier`: ReadingType multipliers (interval usage).
+* `invertCostIfPositiveMultiplier`: UsageSummary cost-line multipliers (billing).
+
+Each flips only a *positive* multiplier, so both stay correct if Enbridge fixes its feed before
+they are removed. Reported to Enbridge 2026-10-28. Once their feed sends `-3`, remove the quirks;
+the integration sees the quirk set change and rebuilds each entry's statistics automatically.
+
+The UsageSummary's itemized cost lines don't add up to the bill on their own: they include $/m³
+rates and the supply charge under two names. The integration takes the bill total from
+`billLastPeriod`, at the scale of the matching "Amount Due" line.
+
+Readings are gas volume in m³ (`uom` 42), one per billing period (roughly monthly), despite the
+`IntervalDuration=86400` in the registered scope.
+
 ## Information on File
 
-TODO: name and contact of the registrant.
+Registration created by Raman Gupta (@rocketraman) using his own contact information.
 
 ## mTLS Status
 
