@@ -125,7 +125,10 @@ The server's `utilities.conf` reads these via Hoplite env substitution.
 
 ## Continuous deploy from GitHub Actions
 
-[.github/workflows/deploy.yml](../.github/workflows/deploy.yml) runs on every push to `master` that touches `server/**`, `branding/**`, or the `Dockerfile`. It runs `./gradlew build` (compile + tests) as a gate, then `flyctl deploy --config server/fly.toml --dockerfile Dockerfile --remote-only` — compiling the GraalVM **native** image on Fly's remote builder and releasing it, with `OPENGB_VERSION` stamped to the commit SHA. (Native-image compilation is slower and more memory-hungry than a plain JVM build, so expect longer CI runs — the payoff is the sub-second startup above.)
+The `deploy` job in [server-ci.yml](../.github/workflows/server-ci.yml) runs on every push to `master` that touches `server/**`, `branding/**`, the `Dockerfile`, or the other paths that workflow watches (and on manual dispatch from `master`).
+It `needs:` the `build` (lint + compile + tests) and `native-image-metadata` jobs, so a push with failing tests or stale reachability metadata is never released.
+It then runs `flyctl deploy --config server/fly.toml --dockerfile Dockerfile --local-only`, compiling the GraalVM **native** image on the runner's Docker daemon and releasing it, with `OPENGB_VERSION` stamped to the commit SHA.
+(Native-image compilation is slower and more memory-hungry than a plain JVM build, so expect longer CI runs — the payoff is the sub-second startup above.)
 
 One-time setup — generate a deploy token and store it as a repo secret:
 

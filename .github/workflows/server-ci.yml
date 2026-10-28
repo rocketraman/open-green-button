@@ -6,6 +6,9 @@ on:
       - 'server/**'
       - 'scripts/generate-native-metadata.sh'
       - 'mise.toml'
+      - 'branding/**'
+      - 'Dockerfile'
+      - '.dockerignore'
       - '.github/workflows/server-ci.yml'
   push:
     branches: [master]
@@ -13,7 +16,11 @@ on:
       - 'server/**'
       - 'scripts/generate-native-metadata.sh'
       - 'mise.toml'
+      - 'branding/**'
+      - 'Dockerfile'
+      - '.dockerignore'
       - '.github/workflows/server-ci.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -103,3 +110,45 @@ jobs:
             git --no-pager diff --cached -- "${paths[@]}"
             exit 1
           fi
+
+  # Deploy lives in this workflow (not a separate one) so it can `needs:` the checks above: a push
+  # to master only releases once the build/tests AND the native-image metadata check have passed.
+  # Stale metadata only fails the native image at runtime, so it must gate the release.
+  deploy:
+    needs: [build, native-image-metadata]
+    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    # Serialize deploys: a second push that lands while one deploy is running waits
+    # rather than racing for Fly's deploy lock. cancel-in-progress=false → newer run
+    # queues behind in-flight, doesn't kill it (kills risk leaving the app in a
+    # half-released state).
+    concurrency:
+      group: fly-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      # Build the GraalVM native image from the Dockerfile and release it. `--local-only` builds on
+      # this runner's Docker daemon (16 GB RAM) rather than Fly's default remote builder, which is
+      # memory-starved and OOMs during native-image analysis (~6 GB peak needed). Run from the repo
+      # root: the Dockerfile's build context needs ../branding, and --config points Fly at
+      # server/fly.toml. OPENGB_VERSION stamps the build with the commit SHA.
+      - name: Deploy native image to Fly
+        run: |
+          flyctl deploy \
+            --config server/fly.toml \
+            --dockerfile Dockerfile \
+            --local-only \
+            --build-arg OPENGB_VERSION=${{ github.sha }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Summarize
+        if: success()
+        run: |
+          echo "### Deployed (GraalVM native image)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- App: https://fly.io/apps/open-green-button" >> "$GITHUB_STEP_SUMMARY"
