@@ -204,6 +204,13 @@ data class UtilityQuirks(
    * other.
    */
   val invertCostIfPositiveMultiplier: Boolean = false,
+  /**
+   * The custodian sends IntervalReading `<cost>` in 1/1,000 of the currency unit instead of
+   * ESPI's 1/100,000, so read literally every interval cost is 100× too small. Alectra reports
+   * 13¢ of energy as `<cost>130</cost>` (open-green-button-homeassistant issues/33). Nothing in the
+   * feed says which scale is in use, so this has to be named per utility.
+   */
+  val intervalCostInThousandths: Boolean = false,
 ) {
   /** Quirks the HA client has to apply itself (it parses the ESPI), as `OpenGB-Quirks` tokens. */
   val clientQuirks: List<String>
@@ -211,6 +218,7 @@ data class UtilityQuirks(
       listOfNotNull(
         CLIENT_QUIRK_INVERT_USAGE_IF_POSITIVE_MULTIPLIER.takeIf { invertUsageIfPositiveMultiplier },
         CLIENT_QUIRK_INVERT_COST_IF_POSITIVE_MULTIPLIER.takeIf { invertCostIfPositiveMultiplier },
+        CLIENT_QUIRK_INTERVAL_COST_IN_THOUSANDTHS.takeIf { intervalCostInThousandths },
       )
 }
 
@@ -219,6 +227,9 @@ const val CLIENT_QUIRK_INVERT_USAGE_IF_POSITIVE_MULTIPLIER: String = "invertUsag
 
 /** `OpenGB-Quirks` token for [UtilityQuirks.invertCostIfPositiveMultiplier]. */
 const val CLIENT_QUIRK_INVERT_COST_IF_POSITIVE_MULTIPLIER: String = "invertCostIfPositiveMultiplier"
+
+/** `OpenGB-Quirks` token for [UtilityQuirks.intervalCostInThousandths]. */
+const val CLIENT_QUIRK_INTERVAL_COST_IN_THOUSANDTHS: String = "intervalCostInThousandths"
 
 /** Wire format for ESPI date-filter values. See [UtilityQuirks.dateFilterFormat]. */
 enum class DateFilterFormat {
