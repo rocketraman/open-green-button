@@ -84,7 +84,7 @@ if curl -fsS -o /dev/null -m1 "http://127.0.0.1:$PORT/health" 2>/dev/null; then
   exit 1
 fi
 # The default clean-env boot builds a plain HTTP client and never loads a keystore, so the mTLS
-# client-auth path (KeyStore.getInstance("PKCS12").load + Ktor's addKeyStore reflecting into the
+# client-auth path (KeyStore.getInstance("PKCS12").load + the KeyManagerFactory/SSLContext built over the
 # PKCS12 keystore SPI) would go untraced and then fail at *runtime* on the Fly machine once the
 # real OPENGB_CLIENTAUTH_KEYSTOREBASE64 secret is set. Boot WITH a throwaway keystore so that path
 # is exercised and captured. The cert contents are irrelevant to reachability — only that the

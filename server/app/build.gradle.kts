@@ -151,7 +151,7 @@ graalvmNative {
         // native-image evaluates at build time; declare it build-time-initialized so the
         // analysis doesn't flag it as "unintentionally initialized".
         "--initialize-at-build-time=kotlin.DeprecationLevel",
-        // The outbound utility OAuth/usage calls go over HTTPS via the Ktor CIO client.
+        // The outbound utility OAuth/usage calls go over HTTPS via the Ktor Java (JDK HttpClient) engine.
         "--enable-url-protocols=http,https",
         // Embed the app's own classpath resources. The tracing agent captures log4j2's config
         // (it logs during tests) but not these — the test suite builds AppConfig directly and
@@ -235,7 +235,7 @@ dependencies {
 
   // Ktor client (for utility upstream calls)
   implementation(libs.ktor.client.core)
-  implementation(libs.ktor.client.cio)
+  implementation(libs.ktor.client.java)
   implementation(libs.ktor.client.content.negotiation)
   implementation(libs.ktor.client.logging)
 
