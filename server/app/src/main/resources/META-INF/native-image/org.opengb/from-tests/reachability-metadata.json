@@ -451,25 +451,6 @@
       "type": "io.ktor.http.content.TextContent"
     },
     {
-      "type": "io.ktor.network.selector.LockFreeMPSCQueue",
-      "fields": [
-        {
-          "name": "curRef"
-        }
-      ]
-    },
-    {
-      "type": "io.ktor.network.selector.LockFreeMPSCQueueCore",
-      "fields": [
-        {
-          "name": "nextRef"
-        },
-        {
-          "name": "stateRef"
-        }
-      ]
-    },
-    {
       "type": "io.ktor.serialization.kotlinx.json.KotlinxSerializationJsonExtensionProvider"
     },
     {
