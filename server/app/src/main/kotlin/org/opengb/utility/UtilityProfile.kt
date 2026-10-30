@@ -211,6 +211,18 @@ data class UtilityQuirks(
    * feed says which scale is in use, so this has to be named per utility.
    */
   val intervalCostInThousandths: Boolean = false,
+  /**
+   * The custodian's UsageSummary detail lines carry the meter's register — "Previous Meter Read",
+   * "Current Meter Read", the two read dates, and the atmospheric adjustment factor — and those are
+   * a better usage source than its IntervalReadings. Enbridge Gas reads most meters by hand every
+   * other month: its IntervalReadings stop months before its bills do and are never revised when an
+   * actual read corrects an estimate, while the bills' register chains without gaps.
+   *
+   * The lines are the custodian's own notes, not ESPI, so the client only parses them under this
+   * quirk; matching the note text alone would let a cosmetic rename at any utility change how its
+   * usage is read.
+   */
+  val summaryMeterReads: Boolean = false,
 ) {
   /** Quirks the HA client has to apply itself (it parses the ESPI), as `OpenGB-Quirks` tokens. */
   val clientQuirks: List<String>
@@ -219,6 +231,7 @@ data class UtilityQuirks(
         CLIENT_QUIRK_INVERT_USAGE_IF_POSITIVE_MULTIPLIER.takeIf { invertUsageIfPositiveMultiplier },
         CLIENT_QUIRK_INVERT_COST_IF_POSITIVE_MULTIPLIER.takeIf { invertCostIfPositiveMultiplier },
         CLIENT_QUIRK_INTERVAL_COST_IN_THOUSANDTHS.takeIf { intervalCostInThousandths },
+        CLIENT_QUIRK_SUMMARY_METER_READS.takeIf { summaryMeterReads },
       )
 }
 
@@ -230,6 +243,9 @@ const val CLIENT_QUIRK_INVERT_COST_IF_POSITIVE_MULTIPLIER: String = "invertCostI
 
 /** `OpenGB-Quirks` token for [UtilityQuirks.intervalCostInThousandths]. */
 const val CLIENT_QUIRK_INTERVAL_COST_IN_THOUSANDTHS: String = "intervalCostInThousandths"
+
+/** `OpenGB-Quirks` token for [UtilityQuirks.summaryMeterReads]. */
+const val CLIENT_QUIRK_SUMMARY_METER_READS: String = "summaryMeterReads"
 
 /** Wire format for ESPI date-filter values. See [UtilityQuirks.dateFilterFormat]. */
 enum class DateFilterFormat {
