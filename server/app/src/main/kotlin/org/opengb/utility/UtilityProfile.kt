@@ -225,6 +225,15 @@ data class UtilityQuirks(
    * usage is read.
    */
   val enbridgeMeterReads: Boolean = false,
+  /**
+   * A UsageSummary's `billLastPeriod` (and its "New Charges This Period" / "Total Amount Due"
+   * lines) is the whole bill, including charges for services that aren't this usage point's, so
+   * the client prices each bill from its itemized charge lines instead. Burlington Hydro bills
+   * Halton Region water every other month on the same bill: a $187.73 electricity bill arrives
+   * with `billLastPeriod` = $502.29 and no line item for the $314.56 of water. Nothing in the feed
+   * marks those months; only the H.S.T. line, 13% of the electricity charges alone, gives it away.
+   */
+  val summaryCostFromItemizedCharges: Boolean = false,
 ) {
   /** Quirks the HA client has to apply itself (it parses the ESPI), as `OpenGB-Quirks` tokens. */
   val clientQuirks: List<String>
@@ -234,6 +243,7 @@ data class UtilityQuirks(
         CLIENT_QUIRK_INVERT_COST_IF_POSITIVE_MULTIPLIER.takeIf { invertCostIfPositiveMultiplier },
         CLIENT_QUIRK_INTERVAL_COST_IN_THOUSANDTHS.takeIf { intervalCostInThousandths },
         CLIENT_QUIRK_ENBRIDGE_METER_READS.takeIf { enbridgeMeterReads },
+        CLIENT_QUIRK_SUMMARY_COST_FROM_ITEMIZED_CHARGES.takeIf { summaryCostFromItemizedCharges },
       )
 }
 
@@ -248,6 +258,9 @@ const val CLIENT_QUIRK_INTERVAL_COST_IN_THOUSANDTHS: String = "intervalCostInTho
 
 /** `OpenGB-Quirks` token for [UtilityQuirks.enbridgeMeterReads]. */
 const val CLIENT_QUIRK_ENBRIDGE_METER_READS: String = "enbridgeMeterReads"
+
+/** `OpenGB-Quirks` token for [UtilityQuirks.summaryCostFromItemizedCharges]. */
+const val CLIENT_QUIRK_SUMMARY_COST_FROM_ITEMIZED_CHARGES: String = "summaryCostFromItemizedCharges"
 
 /** Wire format for ESPI date-filter values. See [UtilityQuirks.dateFilterFormat]. */
 enum class DateFilterFormat {
