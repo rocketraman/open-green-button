@@ -39,15 +39,15 @@ val UtilityQuirksConfigTest by testSuite {
     assert(quirks.clientQuirks == listOf(CLIENT_QUIRK_INTERVAL_COST_IN_THOUSANDTHS)) { "got ${quirks.clientQuirks}" }
   }
 
-  test("summaryMeterReads defaults off and adds only its own client quirk") {
-    assert(!loadHocon<QuirksHolder>("{}").quirks.summaryMeterReads)
-    val quirks = loadHocon<QuirksHolder>("quirks: { summaryMeterReads: true }").quirks
-    assert(quirks.clientQuirks == listOf(CLIENT_QUIRK_SUMMARY_METER_READS)) { "got ${quirks.clientQuirks}" }
+  test("enbridgeMeterReads defaults off and adds only its own client quirk") {
+    assert(!loadHocon<QuirksHolder>("{}").quirks.enbridgeMeterReads)
+    val quirks = loadHocon<QuirksHolder>("quirks: { enbridgeMeterReads: true }").quirks
+    assert(quirks.clientQuirks == listOf(CLIENT_QUIRK_ENBRIDGE_METER_READS)) { "got ${quirks.clientQuirks}" }
   }
 
   test("the packaged utilities.conf reads usage from bill meter reads for Enbridge only") {
     val utilities = ConfigFactory.parseResources("utilities.conf").getConfigList("utilities")
-    val path = "quirks.summaryMeterReads"
+    val path = "quirks.enbridgeMeterReads"
     val on = utilities.filter { it.hasPath(path) && it.getBoolean(path) }.map { it.getString("id") }
     assert(on == listOf("enbridge")) { "$on" }
   }

@@ -52,7 +52,7 @@ in the `OpenGB-Quirks` header:
 
 * `invertUsageIfPositiveMultiplier`: ReadingType multipliers (interval usage).
 * `invertCostIfPositiveMultiplier`: UsageSummary cost-line multipliers (billing).
-* `summaryMeterReads`: take usage from the bills' meter-read lines (see below).
+* `enbridgeMeterReads`: take usage from the bills' meter-read lines (see below).
 
 The two multiplier quirks each flip only a *positive* multiplier, so both stay correct if Enbridge fixes its feed before
 they are removed. Reported to Enbridge 2026-10-28. Once their feed sends `-3`, remove the quirks;
@@ -82,7 +82,7 @@ Verified against paper bills:
 * When an actual read comes in below an earlier estimate, a correction bill spans both periods.
   It lists two "Current Meter Read" lines (the estimate, then the actual read) and is itself marked `qualityOfReading` 12.
 
-The `summaryMeterReads` quirk tells the integration to build its usage from that register, spreading usage evenly between actual reads.
+The `enbridgeMeterReads` quirk tells the integration to build its usage from that register, spreading usage evenly between actual reads.
 The design is in the integration repository, `docs/design/bill-meter-reads.md`.
 
 ## Information on File

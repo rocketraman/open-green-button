@@ -218,11 +218,13 @@ data class UtilityQuirks(
    * other month: its IntervalReadings stop months before its bills do and are never revised when an
    * actual read corrects an estimate, while the bills' register chains without gaps.
    *
-   * The lines are the custodian's own notes, not ESPI, so the client only parses them under this
+   * The lines are Enbridge's own notes, not ESPI: their wording, unit codes, epoch-date values and
+   * correction-bill layout are Enbridge's, so the quirk is named for it. Another utility with
+   * register lines of its own gets its own quirk and parser. The client only parses them under this
    * quirk; matching the note text alone would let a cosmetic rename at any utility change how its
    * usage is read.
    */
-  val summaryMeterReads: Boolean = false,
+  val enbridgeMeterReads: Boolean = false,
 ) {
   /** Quirks the HA client has to apply itself (it parses the ESPI), as `OpenGB-Quirks` tokens. */
   val clientQuirks: List<String>
@@ -231,7 +233,7 @@ data class UtilityQuirks(
         CLIENT_QUIRK_INVERT_USAGE_IF_POSITIVE_MULTIPLIER.takeIf { invertUsageIfPositiveMultiplier },
         CLIENT_QUIRK_INVERT_COST_IF_POSITIVE_MULTIPLIER.takeIf { invertCostIfPositiveMultiplier },
         CLIENT_QUIRK_INTERVAL_COST_IN_THOUSANDTHS.takeIf { intervalCostInThousandths },
-        CLIENT_QUIRK_SUMMARY_METER_READS.takeIf { summaryMeterReads },
+        CLIENT_QUIRK_ENBRIDGE_METER_READS.takeIf { enbridgeMeterReads },
       )
 }
 
@@ -244,8 +246,8 @@ const val CLIENT_QUIRK_INVERT_COST_IF_POSITIVE_MULTIPLIER: String = "invertCostI
 /** `OpenGB-Quirks` token for [UtilityQuirks.intervalCostInThousandths]. */
 const val CLIENT_QUIRK_INTERVAL_COST_IN_THOUSANDTHS: String = "intervalCostInThousandths"
 
-/** `OpenGB-Quirks` token for [UtilityQuirks.summaryMeterReads]. */
-const val CLIENT_QUIRK_SUMMARY_METER_READS: String = "summaryMeterReads"
+/** `OpenGB-Quirks` token for [UtilityQuirks.enbridgeMeterReads]. */
+const val CLIENT_QUIRK_ENBRIDGE_METER_READS: String = "enbridgeMeterReads"
 
 /** Wire format for ESPI date-filter values. See [UtilityQuirks.dateFilterFormat]. */
 enum class DateFilterFormat {
