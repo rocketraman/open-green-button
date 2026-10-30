@@ -47,13 +47,14 @@ value × 10^multiplier; Enbridge scales the raw value *up* instead, so a 538 m³
 `538000` at multiplier `3`, and a $35.03 bill as `35030` at `3`. Read per spec, usage and cost come
 out a million times too large.
 
-`utilities.conf` sets two client quirks for Enbridge, forwarded to the Home Assistant integration
+`utilities.conf` sets three client quirks for Enbridge, forwarded to the Home Assistant integration
 in the `OpenGB-Quirks` header:
 
 * `invertUsageIfPositiveMultiplier`: ReadingType multipliers (interval usage).
 * `invertCostIfPositiveMultiplier`: UsageSummary cost-line multipliers (billing).
+* `enbridgeMeterReads`: take usage from the bills' meter-read lines (see below).
 
-Each flips only a *positive* multiplier, so both stay correct if Enbridge fixes its feed before
+The two multiplier quirks each flip only a *positive* multiplier, so both stay correct if Enbridge fixes its feed before
 they are removed. Reported to Enbridge 2026-10-28. Once their feed sends `-3`, remove the quirks;
 the integration sees the quirk set change and rebuilds each entry's statistics automatically.
 
@@ -63,6 +64,26 @@ rates and the supply charge under two names. The integration takes the bill tota
 
 Readings are gas volume in m³ (`uom` 42), one per billing period (roughly monthly), despite the
 `IntervalDuration=86400` in the registered scope.
+
+## Usage From Bill Meter Reads
+
+Most residential meters are read by hand every other month; the months in between are estimated.
+The IntervalReadings are not a reliable usage source:
+they stop months before the bills do (on every account seen in 2026, between March and June), and they are not revised when an actual read corrects an estimate.
+
+Each UsageSummary carries the meter's register instead, as zero-amount detail lines:
+"Previous Meter Read", "Current Meter Read", "Billing Period - Previous/Current Read Date", "Bill Date" and "Adjustment Factor (atmospheric)".
+Verified against paper bills:
+
+* `qualityOfReading` 19 is an actual read and 12 an estimate.
+* The billing period runs from the day after the previous read through the current read date.
+  The `billingPeriod` duration is one day short.
+* Billed volume = round((current − previous read) × adjustment factor).
+* When an actual read comes in below an earlier estimate, a correction bill spans both periods.
+  It lists two "Current Meter Read" lines (the estimate, then the actual read) and is itself marked `qualityOfReading` 12.
+
+The `enbridgeMeterReads` quirk tells the integration to build its usage from that register, spreading usage evenly between actual reads.
+The design is in the integration repository, `docs/design/bill-meter-reads.md`.
 
 ## Information on File
 
