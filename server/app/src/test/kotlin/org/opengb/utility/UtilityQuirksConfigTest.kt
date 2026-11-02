@@ -52,6 +52,21 @@ val UtilityQuirksConfigTest by testSuite {
     assert(on == listOf("enbridge")) { "$on" }
   }
 
+  test("summaryCostFromItemizedCharges defaults off and adds only its own client quirk") {
+    assert(!loadHocon<QuirksHolder>("{}").quirks.summaryCostFromItemizedCharges)
+    val quirks = loadHocon<QuirksHolder>("quirks: { summaryCostFromItemizedCharges: true }").quirks
+    assert(quirks.clientQuirks == listOf(CLIENT_QUIRK_SUMMARY_COST_FROM_ITEMIZED_CHARGES)) {
+      "got ${quirks.clientQuirks}"
+    }
+  }
+
+  test("the packaged utilities.conf prices bills from itemized charges for Burlington only") {
+    val utilities = ConfigFactory.parseResources("utilities.conf").getConfigList("utilities")
+    val path = "quirks.summaryCostFromItemizedCharges"
+    val on = utilities.filter { it.hasPath(path) && it.getBoolean(path) }.map { it.getString("id") }
+    assert(on == listOf("burlington_hydro")) { "$on" }
+  }
+
   test("the packaged utilities.conf scales interval cost in thousandths for Alectra only") {
     val utilities = ConfigFactory.parseResources("utilities.conf").getConfigList("utilities")
     val path = "quirks.intervalCostInThousandths"
